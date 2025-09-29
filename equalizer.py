@@ -17,8 +17,6 @@ def get_aim_heat(mas, mode):
         return mas.pop(aim_index)
 
 
-
-
 def average_heat_calculation(mas):
     return sum([elm.heat for elm in mas]) / len(mas)
 
