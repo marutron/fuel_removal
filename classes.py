@@ -17,6 +17,9 @@ class Cell:
     def __repr__(self):
         return f"{self.number}: {self.tvs}"
 
+    def is_empty(self):
+        return True if self.tvs is None else False
+
 
 class Container:
     def __init__(self, number, **kwargs):
@@ -28,7 +31,16 @@ class Container:
         self.inner_layer = [Cell(None, i) for i in range(7, 13)]
 
     def __repr__(self):
-        return f"Контейнер № {self.number}; кол-во ТВС: {len(self.tvs_lst)}; средн. тепловыд.:{self.heat}."
+        return f"Контейнер № {self.number}; кол-во ТВС: {self.get_tvs_count()}; тепловыделение: {self.heat}."
+
+    #   Возвращает количество ТВС в контейнере
+    def get_tvs_count(self):
+        if len(self.tvs_lst) > 0:
+            return len(self.tvs_lst)
+        else:
+            outer_count = sum([0 if i.is_empty() else 1 for i in self.outer_layer])
+            inner_count = sum([0 if j.is_empty() else 1 for j in self.inner_layer])
+            return inner_count + outer_count
 
     def calculate_heat(self):
         self.heat = sum(tvs.heat for tvs in self.tvs_lst)

@@ -51,7 +51,7 @@ def result_file_handler(result_file, containers_pool):
     with open(result_file, "w") as file:
         for container in containers_pool:
             file.write(
-                f"Контейнер № {container.number} ({len(container.tvs_lst)} ТВС), тепловыделение: {round(container.heat, 4)}\n"
+                f"{container}\n"
             )
             for cell in container.outer_layer + container.inner_layer:
                 file.write(f"{cell}\n")
@@ -61,7 +61,6 @@ def result_file_handler(result_file, containers_pool):
 if __name__ == "__main__":
     bv_hash = get_bv_tvs(into_bv_file)
     for_remove = get_tvs_to_remove(tvs_to_remove_file)
-    # containers_count = input("Введите количество контейнеров")
     containers = []
     iterator = 1
 
