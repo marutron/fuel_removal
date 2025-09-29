@@ -39,10 +39,16 @@ def get_tvs_to_remove(filename):
                     last_restriction = int(line)
                 except ValueError:
                     print(f"Ограничение задано неверно. Невозможно представить строку '{line}' как число")
-                restrictions[last_restriction] = []
+                restrictions.setdefault(last_restriction, [])
             else:
-                restrictions[last_restriction].append(line.strip())
-
+                try:
+                    restrictions[last_restriction].append(line.strip())
+                except KeyError:
+                    # задействуется в случае если в файле сразу начинаются ТВС, без задания количества ТВС в контейнере
+                    # в таком случае укладываем по 12 ТВС
+                    restrictions.setdefault(12, [])
+                    # специально не указывал 12 тут чтобы отлавливать ошибки неправильного парсинга и пр.
+                    restrictions[last_restriction].append(line.strip())
         return restrictions
 
 

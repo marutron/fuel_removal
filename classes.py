@@ -31,7 +31,7 @@ class Container:
         self.inner_layer = [Cell(i) for i in range(7, 13)]
 
     def __repr__(self):
-        return f"Контейнер № {self.number}; кол-во ТВС: {self.get_tvs_count()}; тепловыделение: {self.heat}."
+        return f"Контейнер № {self.number}; кол-во ТВС: {self.get_tvs_count()}; тепловыделение: {round(self.heat, 4)}."
 
     #   Возвращает количество ТВС в контейнере
     def get_tvs_count(self):
@@ -53,7 +53,10 @@ class Container:
                 if tvs.heat > max_heat:
                     max_heat = tvs.heat
                     hot_tvs_idx = self.tvs_lst.index(tvs)
-            cell.tvs = self.tvs_lst.pop(hot_tvs_idx)
+            try:
+                cell.tvs = self.tvs_lst.pop(hot_tvs_idx)
+            except IndexError:
+                pass
 
         for cell in self.outer_layer:
             try:
