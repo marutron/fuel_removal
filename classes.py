@@ -1,9 +1,17 @@
 class TVS:
-    def __init__(self, number: str, heat: float, bv_coord: str, ps: str):
+    def __init__(self, number: str, heat: float, bv_coord: str, ps: str, u5, u8, pu8, pu9, pu0, pu1, pu2):
         self.number: str = number
         self.heat = heat
         self.bv_coord = bv_coord
         self.ps = ps
+        self.u5 = u5
+        self.u8 = u8
+        self.pu8 = pu8
+        self.pu9 = pu9
+        self.pu0 = pu0
+        self.pu1 = pu1
+        self.pu2 = pu2
+        self.sum_isotopes = u5 + u8 + pu8 + pu9 + pu0 + pu1 + pu2
 
     def __repr__(self):
         return f"{self.number}  {round(self.heat, 4)} {self.bv_coord} {self.ps}"
