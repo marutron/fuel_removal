@@ -145,7 +145,6 @@ if __name__ == "__main__":
             except KeyError as err:
                 print(f"Запрашиваемая на вывоз ТВС '{number}' не найдена в БВ. Проверьте данные.")
 
-        print(tvs_pool)
         new_containers, iterator = equalizer_main(containers_count, tvs_pool, iterator)
         for container in new_containers:
             container.fill_cells()
