@@ -35,7 +35,7 @@ class Container:
         self.cells_num = kwargs["cells_num"] if kwargs.get("cells_num") else 12
         self.heat = 0.0
         self.tvs_lst = []
-        self.outer_layer = [Cell(1), Cell(4), Cell(2), Cell(5), Cell(3), Cell(6)]
+        self.outer_layer = [Cell(i) for i in range(1, 7)]
         self.inner_layer = [Cell(i) for i in range(7, 13)]
 
     def __repr__(self):
