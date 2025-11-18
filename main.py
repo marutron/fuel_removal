@@ -124,8 +124,11 @@ def result_file_handler(result_file, containers_pool, backup):
     """
     with open(result_file, "w") as file:
         for container in containers_pool:
+            # заполняем картограммы ТК-13
             cartogram = container.get_cartogram()
             add_tk_13(cartogram)
+
+            # заполняем .txt файл
             file.write(
                 f"{container}\n"
             )
