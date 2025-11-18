@@ -3,7 +3,7 @@ import os
 
 from classes import TVS
 from equalizer import equalizer_main
-from odt_handler import add_tk_13
+from cartogram_handler import add_tk_13
 
 cur_dir = os.getcwd()
 into_bv_file = os.path.join(cur_dir, "into_bv.txt")
