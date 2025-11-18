@@ -61,6 +61,7 @@ def get_tvs_to_remove(filename):
                     restrictions[last_restriction].append(line.strip())
         return restrictions, tvs_counter
 
+
 # Обработчик ввода количества резервных ТВС
 def get_backup_tvs_count():
     while True:
@@ -74,6 +75,7 @@ def get_backup_tvs_count():
             print(f"Введите значение в диапазоне [0, {tvs_count - 1}]")
         else:
             return count
+
 
 # Выбирает из ТВС, готовящихся к вывозу с АЭС те, сумма ЯМ в которых наименьшая
 #   count - количество ТВС, которые надо направить в резерв
@@ -112,8 +114,14 @@ def get_backup_tvs(count, for_remove, bv_hash):
     return result_for_remove, backup
 
 
-# Создание файла с результатом операций
 def result_file_handler(result_file, containers_pool, backup):
+    """
+    Создает файлы с результатом операций
+    :param result_file: файл результата .txt (устаревшее)
+    :param containers_pool: пул сущностей контейнеров
+    :param backup: пул резервных ТВС
+    :return: None
+    """
     with open(result_file, "w") as file:
         for container in containers_pool:
             cartogram = container.get_cartogram()
