@@ -41,8 +41,11 @@ class Container:
     def __repr__(self):
         return f"Контейнер № {self.number}; кол-во ТВС: {self.get_tvs_count()}; тепловыделение: {round(self.heat, 4)}."
 
-    #   Возвращает количество ТВС в контейнере
     def get_tvs_count(self):
+        """
+        Возвращает количество ТВС в контейнере
+        :return: int
+        """
         if len(self.tvs_lst) > 0:
             return len(self.tvs_lst)
         else:
@@ -71,3 +74,38 @@ class Container:
                 cell.tvs = self.tvs_lst.pop()
             except IndexError:
                 pass
+
+    def get_cartogram(self):
+        """
+        Составляет словарь, используемый для заполнения картограмм ТК-13
+        :return: dict[str, str] в формате, описанном в odt_handler.py / add_tk_13()
+        """
+        cartogram = {}
+
+        def add_cell(cartogram, cell, empty_mode=False):
+            """
+            Добавляет ячейку в словарь картограммы
+            :param cartogram: словарь для передачи в обработчик картограммы
+            :param cell: ячейка контейенра
+            :param empty_mode: параметр заполнения
+            :return: словарь картограммы
+            """
+            cartogram[f"TVS{cell.number}"] = cell.tvs.number if not empty_mode else "-"
+            cartogram[f"AR{cell.number}"] = " "  # todo заменить на номер ПС СУЗ
+            return cartogram
+
+        for cell in self.outer_layer:
+            if not cell.is_empty():
+                cartogram = add_cell(cartogram, cell, False)
+            else:
+                cartogram = add_cell(cartogram, cell, True)
+
+        for cell in self.inner_layer:
+            if not cell.is_empty():
+                cartogram = add_cell(cartogram, cell, False)
+            else:
+                cartogram = add_cell(cartogram, cell, True)
+
+        cartogram["n"] = self.number
+
+        return cartogram

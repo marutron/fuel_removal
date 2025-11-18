@@ -3,6 +3,7 @@ import os
 
 from classes import TVS
 from equalizer import equalizer_main
+from odt_handler import add_tk_13
 
 cur_dir = os.getcwd()
 into_bv_file = os.path.join(cur_dir, "into_bv.txt")
@@ -115,6 +116,8 @@ def get_backup_tvs(count, for_remove, bv_hash):
 def result_file_handler(result_file, containers_pool, backup):
     with open(result_file, "w") as file:
         for container in containers_pool:
+            cartogram = container.get_cartogram()
+            add_tk_13(cartogram)
             file.write(
                 f"{container}\n"
             )
