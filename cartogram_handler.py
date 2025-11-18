@@ -54,6 +54,23 @@ def add_tk_13(replace_text: dict):
             set_text(p, replace_text)
     doc.save(result)
 
+def fill_bv(replace_text: dict):
+    """
+    Заполняет картограмму БВ по данным в полученном словаре. Результат сохраняет в папку result.
+    :param replace_text: dict[str, str] старый текст - новый текст
+    :return: None
+    """
+    template = os.path.join(os.path.curdir, "template", "map.odt")
+    result = os.path.join(os.path.curdir, "result", "Картограмма БВ.odt")
+    doc = load(template)
+
+    textboxes = doc.getElementsByType(draw.TextBox)
+    for textbox in textboxes:
+        paragraphs = textbox.getElementsByType(text.P)
+        for p in paragraphs:
+            set_text(p, replace_text)
+    doc.save(result)
+
 
 if __name__ == "__main__":
-    add_tk_13({"AR1": "N1234567", "TVS12": "N123456789", "n": "7"})
+    fill_bv({"TVS48-117": "N123456789", "AR48-117": "N123456 2023г."})
