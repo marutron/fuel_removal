@@ -6,6 +6,9 @@ from odf.table import *
 
 
 class ODFHandler:
+    """
+    Обертка-обработчик odt-файлов
+    """
     def __init__(self, file):
         self.document = load(file)
         self.tables = self.document.getElementsByType(Table)
@@ -14,12 +17,24 @@ class ODFHandler:
         return self.document.getAttribute('name')
 
     def get_table_by_name(self, table_name: str):
+        """
+        Получает таблицу из документа по переданному имени
+        :param table_name:
+        :return: Optional(Table)
+        """
         for table in self.tables:
             if table.getAttribute('name') == table_name:
                 return table
+        print(f"Таблицы с именем {table_name}' не существует в документе.")
+        return None
 
-    def save(self, save_file_name):
-        self.document.save(save_file_name)
+    def save(self, file_name):
+        """
+        Сохнаняет файл по именем file_name
+        :param file_name: имя сохраняемого файла
+        :return:
+        """
+        self.document.save(file_name)
 
 
 class TableHandler:
@@ -30,37 +45,27 @@ class TableHandler:
         return self.table.getAttribute('name')
 
     def get_row(self, row_number: int = None) -> TableRow or TableRows or None:
-        result = None
+        """
+        Возвращает экземпляр строки таблицы (если найдет)
+        :param row_number: номер искомой строки
+        :return: Optional(TableRow)
+        """
+        row = None
         if row_number is None:
-            result = self.table.getElementsByType(TableRow)
+            row = self.table.getElementsByType(TableRow)
         else:
             try:
-                result = self.table.getElementsByType(TableRow)[row_number]
-            except:
-                pass
-
-        return result
-
-    def get_cell_paragraph(self, row_number: int, column_number: int, paragragraph_number: int) -> None or P:
-        result = None
-        try:
-            cell = self.get_cell(row_number, column_number)
-            result = cell.getElementsByType(P)[paragragraph_number]
-        except:
-            pass
-        return result
-
-    def get_cell(self, row_number: int, column_number: int) -> TableCell or None:
-        result = None
-        try:
-            table_row = self.get_row(row_number)
-            result = table_row.getElementsByType(TableCell)[column_number]
-        except:
-            pass
-
-        return result
+                row = self.table.getElementsByType(TableRow)[row_number]
+            except IndexError:
+                print("Запрошенный номер строки превышает количество строк таблицы")
+        return row
 
     def clone_row(self, row_number: int):
+        """
+        Клонирует строку со всеми вложенными узлами.
+        :param row_number: номер строки, которую клонируем
+        :return: None
+        """
         cloned_row = self.get_row(row_number)
         new_row = deepcopy(cloned_row)
         self.table.addElement(new_row)

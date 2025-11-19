@@ -21,7 +21,7 @@ def collect_text_nodes(node, text_nodes):
 def set_text(element, new_text: dict):
     """
     Рекурсивно заменяет весь текст в элементе, сохраняя структуру и стили.
-    :param element: рассматриаваемый элемент
+    :param element: рассматриаваемый элемент (Element)
     :param new_text: dict[str, str]: старый текст - новый текст
     """
     # Собираем все текстовые узлы
@@ -53,6 +53,7 @@ def add_tk_13(replace_text: dict):
         for p in paragraphs:
             set_text(p, replace_text)
     doc.save(result)
+
 
 def fill_bv(replace_text: dict):
     """
