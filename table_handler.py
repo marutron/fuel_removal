@@ -1,14 +1,18 @@
+import os
 from copy import deepcopy
 
 from odf.text import P
 from odf.opendocument import load
 from odf.table import *
 
+from cartogram_handler import set_text
+
 
 class ODFHandler:
     """
     Обертка-обработчик odt-файлов
     """
+
     def __init__(self, file):
         self.document = load(file)
         self.tables = self.document.getElementsByType(Table)
@@ -94,12 +98,37 @@ class TableHandler:
             par.addText(P(text=text))
 
 
-if __name__ == "__main__":
-    doc = ODFHandler("template/table.odt")
+def add_table(data: dict, n: int):
+    """
+    Заполняет таблицу ТК-13 и сохраняет её в папке result.
+    В словаре предусмотреть пару ключ-значение: {n: номер чехла}
+    :param data: dict[int, list] словарь формата {номер строки таблицы: [словарь из значений ячеек]}
+    :param n: int порядковый номер ТК-13
+    :return: None
+    """
+    template = os.path.join(os.path.curdir, "template", "table.odt")
+    result = os.path.join(os.path.curdir, "result", f"Таблица контейнера № {n}.odt")
+
+    doc = ODFHandler(template)
+
+    # пробегаем по документу, меняем "__" на номер ТК-13 (n)
+    for paragraph in doc.document.getElementsByType(P):
+        set_text(paragraph, {"__": f"{n}"})
+
+    # начинаем заниматься заполнением таблицы
     table = TableHandler(doc.get_table_by_name("Таблица1"))
+    row_iter = 2
+    for number, row_data in data.items():
+        table.clone_row(row_iter)
+        table.fill_row(row_iter, row_data)
+        row_iter += 1
 
-    table.clone_row(2)
-    table.fill_row(2, ["a", "b", "c"])
+    doc.save(result)
 
-    doc.save("result/output.odt")
-    pass
+
+if __name__ == "__main__":
+    add_table({
+        1: ["a", "b", "c", "d", "e", "f", "g"],
+        2: ["h", "k", "l", "m", "n", "r", "s"],
+    },
+        5)
