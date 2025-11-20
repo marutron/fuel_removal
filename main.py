@@ -4,6 +4,7 @@ import os
 from classes import TVS
 from equalizer import equalizer_main
 from cartogram_handler import add_tk_13
+from table_handler import add_table
 
 cur_dir = os.getcwd()
 into_bv_file = os.path.join(cur_dir, "into_bv.txt")
@@ -127,6 +128,10 @@ def result_file_handler(result_file, containers_pool, backup):
             # заполняем картограммы ТК-13
             cartogram = container.get_cartogram()
             add_tk_13(cartogram)
+
+            # заполняем таблицы перестановок для ТК-13
+            permutations = container.get_permutations()
+            add_table(permutations, container.number)
 
             # заполняем .txt файл
             file.write(

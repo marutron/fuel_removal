@@ -102,7 +102,7 @@ def add_table(data: dict, n: int):
     """
     Заполняет таблицу ТК-13 и сохраняет её в папке result.
     В словаре предусмотреть пару ключ-значение: {n: номер чехла}
-    :param data: dict[int, list] словарь формата {номер строки таблицы: [словарь из значений ячеек]}
+    :param data: list[list['str']] писок формата [список [список из значений ячеек]]
     :param n: int порядковый номер ТК-13
     :return: None
     """
@@ -118,7 +118,7 @@ def add_table(data: dict, n: int):
     # начинаем заниматься заполнением таблицы
     table = TableHandler(doc.get_table_by_name("Таблица1"))
     row_iter = 2
-    for number, row_data in data.items():
+    for row_data in data:
         table.clone_row(row_iter)
         table.fill_row(row_iter, row_data)
         row_iter += 1
@@ -127,8 +127,8 @@ def add_table(data: dict, n: int):
 
 
 if __name__ == "__main__":
-    add_table({
-        1: ["a", "b", "c", "d", "e", "f", "g"],
-        2: ["h", "k", "l", "m", "n", "r", "s"],
-    },
+    add_table([
+        ["a", "b", "c", "d", "e", "f", "g"],
+        ["h", "k", "l", "m", "n", "r", "s"],
+    ],
         5)

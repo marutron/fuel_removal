@@ -109,3 +109,32 @@ class Container:
         cartogram["n"] = self.number
 
         return cartogram
+
+    def get_permutations(self):
+        """
+        Составляет список списков, используемый для заполнения таблицы перестановок в виде:
+        [список состоящий из строк таблицы [список значений ячеек строки таблицы]]
+        :return:
+        """
+        permutations = []
+
+        def add_cell(permutations: list, cell):
+            """
+            Добавляет ячейку в словарь картограммы
+            :param permutations: список из значений строк таблицы
+            :param cell: ячейка контейенра
+            :return: список значений для вставки в строку таблицы
+            """
+            permutations.append(
+                [f"{cell.number}", f"{cell.tvs.number}", " ", f"{cell.tvs.bv_coord}", " ", " ", f"{cell.number}"])
+            return permutations
+
+        for cell in self.outer_layer:
+            if not cell.is_empty():
+                permutations = add_cell(permutations, cell)
+
+        for cell in self.inner_layer:
+            if not cell.is_empty():
+                permutations = add_cell(permutations, cell)
+
+        return permutations
