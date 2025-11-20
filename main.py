@@ -115,6 +115,13 @@ def get_backup_tvs(count, for_remove, bv_hash):
     return result_for_remove, backup
 
 
+def operation_gen():
+    i = 1
+    while True:
+        yield i
+        i += 1
+
+
 def result_file_handler(result_file, containers_pool, backup):
     """
     Создает файлы с результатом операций
@@ -124,13 +131,16 @@ def result_file_handler(result_file, containers_pool, backup):
     :return: None
     """
     with open(result_file, "w") as file:
+        # инициализируем генератор номера операции (для проставки номера в первом столбце таблицы операций)
+        oper_gen = operation_gen()
+
         for container in containers_pool:
             # заполняем картограммы ТК-13
             cartogram = container.get_cartogram()
             add_tk_13(cartogram)
 
             # заполняем таблицы перестановок для ТК-13
-            permutations = container.get_permutations()
+            permutations = container.get_permutations(oper_gen)
             add_table(permutations, container.number)
 
             # заполняем .txt файл

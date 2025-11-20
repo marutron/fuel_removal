@@ -104,6 +104,7 @@ def add_table(data: dict, n: int):
     В словаре предусмотреть пару ключ-значение: {n: номер чехла}
     :param data: list[list['str']] писок формата [список [список из значений ячеек]]
     :param n: int порядковый номер ТК-13
+    :param operation_gen: генератор номера операции
     :return: None
     """
     template = os.path.join(os.path.curdir, "template", "table.odt")

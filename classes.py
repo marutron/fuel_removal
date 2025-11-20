@@ -110,10 +110,11 @@ class Container:
 
         return cartogram
 
-    def get_permutations(self):
+    def get_permutations(self, oper_gen):
         """
         Составляет список списков, используемый для заполнения таблицы перестановок в виде:
         [список состоящий из строк таблицы [список значений ячеек строки таблицы]]
+        :param: oper_gen: генератор номера операции
         :return:
         """
         permutations = []
@@ -126,7 +127,7 @@ class Container:
             :return: список значений для вставки в строку таблицы
             """
             permutations.append(
-                [f"{cell.number}", f"{cell.tvs.number}", " ", f"{cell.tvs.bv_coord}", " ", " ", f"{cell.number}"])
+                [f"{next(oper_gen)}", f"{cell.tvs.number}", " ", f"{cell.tvs.bv_coord}", " ", " ", f"{cell.number}"])
             return permutations
 
         for cell in self.outer_layer:
