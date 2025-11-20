@@ -1,3 +1,4 @@
+import time
 import math
 import os
 
@@ -157,6 +158,9 @@ def result_file_handler(result_file, containers_pool, backup):
 
 
 if __name__ == "__main__":
+    # замеряем время началы работы программы
+    start = time.perf_counter()
+
     bv_hash = get_bv_tvs(into_bv_file)
     for_remove, tvs_count = get_tvs_to_remove(tvs_to_remove_file)
     count = get_backup_tvs_count()
@@ -178,3 +182,8 @@ if __name__ == "__main__":
             container.fill_cells()
         containers.extend(new_containers)
     result_file_handler(result_file, containers, backup)
+
+    # вычисляем время выполнения программы
+    end = time.perf_counter()
+    elapsed = end - start
+    print(f"Время выполнения: {elapsed:.5f} c.")
