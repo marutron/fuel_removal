@@ -3,7 +3,6 @@ import os
 
 from classes import TVS
 from equalizer import equalizer_main
-from cartogram_handler import add_tk_13
 from table_handler import add_table
 
 cur_dir = os.getcwd()
@@ -135,13 +134,13 @@ def result_file_handler(result_file, containers_pool, backup):
         oper_gen = operation_gen()
 
         for container in containers_pool:
-            # заполняем картограммы ТК-13
-            cartogram = container.get_cartogram()
-            add_tk_13(cartogram)
-
-            # заполняем таблицы перестановок для ТК-13
+            # получаем данные для заполнения картограмм ТК-13
+            tk_data = container.get_cartogram()
+            # получаем данные для заполнения таблиц перестановок ТК-13
             permutations = container.get_permutations(oper_gen)
-            add_table(permutations, container.number)
+
+            # заполняем таблицы перестановок и картограммы для ТК-13
+            add_table(permutations, tk_data, container.number)
 
             # заполняем .txt файл
             file.write(

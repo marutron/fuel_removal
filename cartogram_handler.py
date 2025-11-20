@@ -38,24 +38,6 @@ def set_text(element, new_text: dict):
             node.data = new_text[node.data]
 
 
-def add_tk_13(replace_text: dict):
-    # todo объединить с ункцией add_table, редактировать один и тот же файл таблица + картограмма
-    """
-    Получает на вход словарь с заменяемыми величинами и создает новую картограмму ТК-13
-    :param replace_text: dict[str, str] старый текст - новый текст
-    :return: None
-    """
-    template = os.path.join(os.path.curdir, "template", "tk-13.odt")
-    result = os.path.join(os.path.curdir, "result", f"Картограмма ТК № {replace_text.get('n')}.odt")
-    doc = load(template)
-    textboxes = doc.getElementsByType(draw.TextBox)
-    for textbox in textboxes:
-        paragraphs = textbox.getElementsByType(text.P)
-        for p in paragraphs:
-            set_text(p, replace_text)
-    doc.save(result)
-
-
 def fill_bv(replace_text: dict):
     """
     Заполняет картограмму БВ по данным в полученном словаре. Результат сохраняет в папку result.

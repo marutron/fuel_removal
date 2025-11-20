@@ -98,28 +98,29 @@ class TableHandler:
             par.addText(P(text=text))
 
 
-def add_table(data: dict, n: int):
+def add_table(table_data: list, tk_data: dict, n: int):
     """
     Заполняет таблицу ТК-13 и сохраняет её в папке result.
     В словаре предусмотреть пару ключ-значение: {n: номер чехла}
-    :param data: list[list['str']] писок формата [список [список из значений ячеек]]
+    :param table_data: данные для заполнения таблицы list[list['str']] писок формата [список [список из значений ячеек]]
+    :param tk_data: данные для заполнения картограммы dict[str, str] старый текст - новый текст
     :param n: int порядковый номер ТК-13
     :param operation_gen: генератор номера операции
     :return: None
     """
-    template = os.path.join(os.path.curdir, "template", "table.odt")
+    template = os.path.join(os.path.curdir, "template", "table+tk.odt")
     result = os.path.join(os.path.curdir, "result", f"Таблица контейнера № {n}.odt")
 
     doc = ODFHandler(template)
 
     # пробегаем по документу, меняем "__" на номер ТК-13 (n)
     for paragraph in doc.document.getElementsByType(P):
-        set_text(paragraph, {"__": f"{n}"})
+        set_text(paragraph, tk_data)
 
-    # начинаем заниматься заполнением таблицы
+    # заполняем таблицу перестановок
     table = TableHandler(doc.get_table_by_name("Таблица1"))
     row_iter = 2
-    for row_data in data:
+    for row_data in table_data:
         table.clone_row(row_iter)
         table.fill_row(row_iter, row_data)
         row_iter += 1
@@ -132,4 +133,5 @@ if __name__ == "__main__":
         ["a", "b", "c", "d", "e", "f", "g"],
         ["h", "k", "l", "m", "n", "r", "s"],
     ],
+        {"TVS1": "N12345678", "AR12": "N123456"},
         5)
