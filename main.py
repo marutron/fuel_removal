@@ -1,6 +1,7 @@
 import time
 import math
 import os
+from multiprocessing import Process
 
 from classes import TVS
 from equalizer import equalizer_main
@@ -63,8 +64,12 @@ def get_tvs_to_remove(filename):
         return restrictions, tvs_counter
 
 
-# Обработчик ввода количества резервных ТВС
-def get_backup_tvs_count():
+def get_backup_tvs_count(tvs_count):
+    """
+    Обработчик ввода количества резервных ТВС
+    :param tvs_count: количество ТВС для выгрузки из БВ
+    :return:
+    """
     while True:
         count = -10
         try:
@@ -131,6 +136,9 @@ def result_file_handler(result_file, containers_pool, backup):
     :return: None
     """
     with open(result_file, "w") as file:
+        # список для добавления порожденных процессов
+        prc_pool = []
+
         # инициализируем генератор номера операции (для проставки номера в первом столбце таблицы операций)
         oper_gen = operation_gen()
 
@@ -140,8 +148,10 @@ def result_file_handler(result_file, containers_pool, backup):
             # получаем данные для заполнения таблиц перестановок ТК-13
             permutations = container.get_permutations(oper_gen)
 
-            # заполняем таблицы перестановок и картограммы для ТК-13
-            add_table(permutations, tk_data, container.number)
+            # заполняем таблицы перестановок и картограммы для ТК-13 в режиме многопроцессности
+            prc = Process(target=add_table, args=(permutations, tk_data, container.number))
+            prc.start()
+            prc_pool.append(prc)
 
             # заполняем .txt файл
             file.write(
@@ -156,14 +166,20 @@ def result_file_handler(result_file, containers_pool, backup):
         for tvs in backup:
             file.write(f"{tvs}\n")
 
+    # дожидаемся создания всех файлов
+    for prc in prc_pool:
+        prc.join()
+
 
 if __name__ == "__main__":
-    # замеряем время началы работы программы
-    start = time.perf_counter()
 
     bv_hash = get_bv_tvs(into_bv_file)
     for_remove, tvs_count = get_tvs_to_remove(tvs_to_remove_file)
-    count = get_backup_tvs_count()
+    count = get_backup_tvs_count(tvs_count)
+
+    # замеряем время началы работы программы
+    start = time.perf_counter()
+
     base_remove, backup = get_backup_tvs(count, for_remove, bv_hash)
     containers = []
     iterator = 1
