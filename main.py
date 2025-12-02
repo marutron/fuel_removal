@@ -11,6 +11,7 @@ cur_dir = os.getcwd()
 into_bv_file = os.path.join(cur_dir, "into_bv.txt")
 tvs_to_remove_file = os.path.join(cur_dir, "tvs_to_remove.txt")
 result_file = os.path.join(cur_dir, "result.txt")
+mp_file = os.path.join(cur_dir, "mp_file.mp")
 
 
 # Парсит файл ТВС в БВ в словарь
@@ -139,14 +140,22 @@ def result_file_handler(result_file, containers_pool, backup):
         # список для добавления порожденных процессов
         prc_pool = []
 
+        # делаем "touch" для инициализации пустого файла
+        with open(mp_file, "w"):
+            pass
+
         # инициализируем генератор номера операции (для проставки номера в первом столбце таблицы операций)
         oper_gen = operation_gen()
+        # инициализируем генератор номера операции (для файла МП)
+        oper_gen_mp = operation_gen()
 
         for container in containers_pool:
             # получаем данные для заполнения картограмм ТК-13
             tk_data = container.get_cartogram()
             # получаем данные для заполнения таблиц перестановок ТК-13
             permutations = container.get_permutations(oper_gen)
+            # делаем запись в файл для МП
+            container.add_mp_data(oper_gen_mp, mp_file)
 
             # заполняем таблицы перестановок и картограммы для ТК-13 в режиме многопроцессности
             prc = Process(target=add_table, args=(permutations, tk_data, container.number))

@@ -41,6 +41,30 @@ class Container:
     def __repr__(self):
         return f"Контейнер № {self.number}; кол-во ТВС: {self.get_tvs_count()}; тепловыделение: {round(self.heat, 4)}."
 
+    def add_mp_data(self, oper_gen, mp_file):
+        """
+        Добавляет в файл МП данные о перестановках для формирования чехла
+        :param oper_gen: генератор номера операции
+        :param mp_file: файл для записи данных для МП
+        :return: None
+        """
+        with open(mp_file, "a") as file:
+            for cell in self.outer_layer:
+                if not cell.is_empty():
+                    coord_split = cell.tvs.bv_coord.split("-")
+                    most = coord_split[0]
+                    tel = coord_split[1]
+                    file.write(
+                        f"{next(oper_gen)}	12	600	{cell.tvs.number}	{most}	{tel}	100{self.number}		{cell.number}		N	00:00	00:00	00:00	00:00	0	0	0	0	0\n")
+
+            for cell in self.inner_layer:
+                if not cell.is_empty():
+                    coord_split = cell.tvs.bv_coord.split("-")
+                    most = coord_split[0]
+                    tel = coord_split[1]
+                    file.write(
+                        f"{next(oper_gen)}	12	600	{cell.tvs.number}	{most}	{tel}	100{self.number}		{cell.number}		N	00:00	00:00	00:00	00:00	0	0	0	0	0\n")
+
     def get_tvs_count(self):
         """
         Возвращает количество ТВС в контейнере
