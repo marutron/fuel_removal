@@ -9,10 +9,13 @@ from table_handler import add_table
 from topaz_file_handler import read_topaz, decode_tvs_pool
 
 cur_dir = os.getcwd()
-initial_state_file = os.path.join(cur_dir, "initial_state")
-tvs_to_remove_file = os.path.join(cur_dir, "tvs_to_remove.txt")
-result_file = os.path.join(cur_dir, "result.txt")
-mp_file = os.path.join(cur_dir, "mp_file.mp")
+input_dir = os.path.join(cur_dir, "input")
+output_dir = os.path.join(cur_dir, "output")
+initial_state_file = os.path.join(input_dir, "initial_state")
+final_tate_file = os.path.join(output_dir, "final_state")
+tvs_to_remove_file = os.path.join(input_dir, "tvs_to_remove.txt")
+result_file = os.path.join(output_dir, "result.txt")
+mp_file = os.path.join(output_dir, "mp_file.mp")
 
 
 def get_tvs_to_remove(filename: str, bv_hash: dict[str, TVS]):
@@ -171,7 +174,19 @@ def result_file_handler(result_file, containers_pool, backup):
         prc.join()
 
 
+def clear_folder_files(folder_path):
+    """Удаляет все файлы в папке."""
+    try:
+        # Получаем список всех элементов в папке
+        for item in os.listdir(folder_path):
+            item_path = os.path.join(folder_path, item)
+            os.remove(item_path)
+    except Exception as e:
+        print(f"Ошибка: {e}")
+
+
 if __name__ == "__main__":
+    clear_folder_files(output_dir)
     topaz_tvs_pool = read_topaz(initial_state_file)
     bv_hash = decode_tvs_pool(topaz_tvs_pool)
     for_remove, tvs_count, bv_hash = get_tvs_to_remove(tvs_to_remove_file, bv_hash)
@@ -198,6 +213,19 @@ if __name__ == "__main__":
             container.fill_cells()
         containers.extend(new_containers)
     result_file_handler(result_file, containers, backup)
+
+    # побайтово меняем на нули информацию о выгруженных ТВС
+    final_pool = []
+    for k in topaz_tvs_pool:
+        tvs_number = f"{k.tip.sort} + {k.tip.nomer} + {k.tip.indeks}"
+        if bv_hash.get(tvs_number) is None:
+            # final_pool.append(k.replace_by_zero())
+            final_pool.append(k.encode())
+        else:
+            final_pool.append(k.encode())
+
+    with open(final_tate_file, "wb") as file:
+        file.writelines(final_pool)
 
     # вычисляем время выполнения программы
     end = time.perf_counter()

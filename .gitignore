@@ -1,7 +1,3 @@
-tvs_to_remove.txt
-mp_file.mp
-result.txt
-initial_state
-final_state
 .idea
-result
+input
+output
