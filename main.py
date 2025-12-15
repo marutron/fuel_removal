@@ -6,63 +6,54 @@ from multiprocessing import Process
 from classes import TVS
 from equalizer import equalizer_main
 from table_handler import add_table
+from topaz_file_handler import read_topaz, decode_tvs_pool
 
 cur_dir = os.getcwd()
-into_bv_file = os.path.join(cur_dir, "into_bv.txt")
+initial_state_file = os.path.join(cur_dir, "initial_state")
 tvs_to_remove_file = os.path.join(cur_dir, "tvs_to_remove.txt")
 result_file = os.path.join(cur_dir, "result.txt")
 mp_file = os.path.join(cur_dir, "mp_file.mp")
 
 
-# Парсит файл ТВС в БВ в словарь
-def get_bv_tvs(filename):
-    bv_hash = {}
-    with open(filename) as bv_file:
-        lines = bv_file.readlines()[1::]
-        for line in lines:
-            split_line = line.split()
-            tvs_number = split_line[0] + split_line[1]
-            heat = float(split_line[11])
-            coordinates = f"{split_line[2]}-{split_line[3]}"
-            ps = split_line[12].strip()
-            u5 = float(split_line[4])
-            u8 = float(split_line[5])
-            pu8 = float(split_line[6])
-            pu9 = float(split_line[7])
-            pu0 = float(split_line[8])
-            pu1 = float(split_line[9])
-            pu2 = float(split_line[10])
-            tvs = TVS(tvs_number, heat, coordinates, ps, u5, u8, pu8, pu9, pu0, pu1, pu2)
-            bv_hash[tvs.number] = tvs
-    return bv_hash
-
-
-# Парсит файл с ТВС, помеченными для вывоза с АЭС
-def get_tvs_to_remove(filename):
+def get_tvs_to_remove(filename: str, bv_hash: dict[str, TVS]):
+    """
+    Парсит файл с ТВС, помеченными для вывоза с АЭС
+    :param filename: имя фала, с которого выполняем считывание
+    :param bv_hash: dict[номер ТВС, ТВС] словарь, содержащий ТВС
+    :return:
+    """
     tvs_counter = 0
     with open(filename) as remove_file:
         lines = remove_file.readlines()
         restrictions = {}
         last_restriction = 12
         for line in lines:
-            line = line.strip()
+            line_lst = line.split()
+            tvs_number = line_lst[0].strip()
+            try:
+                tvs_heat = float(line_lst[1].strip())
+            except IndexError:
+                tvs_heat = 0.0
             if len(line) < 10:
                 try:
-                    last_restriction = int(line)
+                    # не употребляю `tvs_number` чтобы подчеркнуть что в этом случае имеем дело не с ТВС,
+                    # а с ограничением
+                    last_restriction = int(line_lst[0].strip())
                 except ValueError:
                     print(f"Ограничение задано неверно. Невозможно представить строку '{line}' как число")
                 restrictions.setdefault(last_restriction, [])
             else:
                 tvs_counter += 1
                 try:
-                    restrictions[last_restriction].append(line.strip())
+                    restrictions[last_restriction].append(tvs_number)
                 except KeyError:
                     # задействуется в случае если в файле сразу начинаются ТВС, без задания количества ТВС в контейнере
                     # в таком случае укладываем по 12 ТВС
                     restrictions.setdefault(12, [])
                     # специально не указывал 12 тут чтобы отлавливать ошибки неправильного парсинга и пр.
-                    restrictions[last_restriction].append(line.strip())
-        return restrictions, tvs_counter
+                    restrictions[last_restriction].append(tvs_number)
+                bv_hash[tvs_number].heat = tvs_heat
+        return restrictions, tvs_counter, bv_hash
 
 
 def get_backup_tvs_count(tvs_count):
@@ -98,7 +89,7 @@ def get_backup_tvs(count, for_remove, bv_hash):
                 raise err
             all_tvs_for_remove.append(tvs)
     # сортируем полученный список по убыванию масс ЯМ
-    sorted_tvs = sorted(all_tvs_for_remove, key=lambda tvs: tvs.sum_isotopes, reverse=True)
+    sorted_tvs = sorted(all_tvs_for_remove, key=lambda tvs: tvs.summ_isotopes, reverse=True)
 
     # собираем в множество номера 'count' ТВС с минимальной суммой масс ЯМ
     backup_numbers = set()
@@ -181,9 +172,9 @@ def result_file_handler(result_file, containers_pool, backup):
 
 
 if __name__ == "__main__":
-
-    bv_hash = get_bv_tvs(into_bv_file)
-    for_remove, tvs_count = get_tvs_to_remove(tvs_to_remove_file)
+    topaz_tvs_pool = read_topaz(initial_state_file)
+    bv_hash = decode_tvs_pool(topaz_tvs_pool)
+    for_remove, tvs_count, bv_hash = get_tvs_to_remove(tvs_to_remove_file, bv_hash)
     count = get_backup_tvs_count(tvs_count)
 
     # замеряем время началы работы программы

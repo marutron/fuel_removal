@@ -43,7 +43,7 @@ def decode_tvs_pool(raw_pool: list[K], codepage: str = "cp1251"):
     Производит расшифровку пула ТВС в байтовых данных
     :param raw_pool: list[K] - пул ТВС в байтовом виде без расшифровки
     :param codepage: используемая кодировка
-    :return: dict[str, TVS] (dict[координаты твс, ТВС])
+    :return: dict[str, TVS] (dict[номер ТВС, ТВС])
     """
     parsed_pool = {}
 
@@ -53,7 +53,7 @@ def decode_tvs_pool(raw_pool: list[K], codepage: str = "cp1251"):
         except Exception:
             print("Неудача парсинга ТВС.")
         else:
-            parsed_pool.setdefault(parsed_tvs.coord, parsed_tvs)
+            parsed_pool.setdefault(parsed_tvs.number, parsed_tvs)
     return parsed_pool
 
 

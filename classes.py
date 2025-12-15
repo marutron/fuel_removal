@@ -360,6 +360,7 @@ class TVS:
         self.p0 = self.parse_real48(k.p0)  # масса Pu240 в ТВС [грамм]
         self.p1 = self.parse_real48(k.p1)  # масса Pu241 в ТВС [грамм]
         self.p2 = self.parse_real48(k.p2)  # масса Pu242 в ТВС [грамм]
+        self.summ_isotopes = self.u5 + self.u8 + self.p8 + self.p9 + self.p0 + self.p1 + self.p2
         self.mass = self.parse_real48(k.gdo)  # масса ТВС [кг]
         self.heat = 0.0  # тепловыделение ТВС, задается только для ТВС, подлежащих отправке
 
@@ -367,7 +368,7 @@ class TVS:
         self.k = k
 
     def __repr__(self):
-        return f"{self.number}  {self.ar}  {self.coord}  "
+        return f"{self.number}  {self.ar}  {self.coord}  {self.heat}"
 
     @staticmethod
     def parse_real48(real48):
@@ -446,7 +447,7 @@ class Container:
         with open(mp_file, "a") as file:
             for cell in self.outer_layer:
                 if not cell.is_empty():
-                    coord_split = cell.tvs.bv_coord.split("-")
+                    coord_split = cell.tvs.coord.split("-")
                     most = coord_split[0]
                     tel = coord_split[1]
                     file.write(
@@ -454,7 +455,7 @@ class Container:
 
             for cell in self.inner_layer:
                 if not cell.is_empty():
-                    coord_split = cell.tvs.bv_coord.split("-")
+                    coord_split = cell.tvs.coord.split("-")
                     most = coord_split[0]
                     tel = coord_split[1]
                     file.write(
@@ -546,7 +547,7 @@ class Container:
             :return: список значений для вставки в строку таблицы
             """
             permutations.append(
-                [f"{next(oper_gen)}", f"{cell.tvs.number}", " ", f"{cell.tvs.bv_coord}", " ", " ", f"{cell.number}"])
+                [f"{next(oper_gen)}", f"{cell.tvs.number}", " ", f"{cell.tvs.coord}", " ", " ", f"{cell.number}"])
             return permutations
 
         for cell in self.outer_layer:
