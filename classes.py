@@ -340,7 +340,8 @@ class TVS:
         self.number = sort + nomer + indeks
 
         len_ar = int(k.cp.nomer[0])
-        self.ar = k.cp.nomer[1:len_ar + 1].decode(codepage)
+        ar = k.cp.nomer[1:len_ar + 1].decode(codepage)
+        self.ar = None if ar == "" else ar
 
         self.coord = f"{k.most[0]}-{k.tel[0]}"
         self.year_out = k.datout[-4:].decode(codepage)
@@ -502,29 +503,26 @@ class Container:
         """
         cartogram = {}
 
-        def add_cell(cartogram, cell, empty_mode=False):
+        def add_cell(cartogram, cell):
             """
             Добавляет ячейку в словарь картограммы
             :param cartogram: словарь для передачи в обработчик картограммы
             :param cell: ячейка контейенра
-            :param empty_mode: параметр заполнения
             :return: словарь картограммы
             """
-            cartogram[f"TVS{cell.number}"] = cell.tvs.number if not empty_mode else "-"
-            cartogram[f"AR{cell.number}"] = " "  # todo заменить на номер ПС СУЗ
+            if not cell.is_empty():
+                cartogram[f"TVS{cell.number}"] = cell.tvs.number
+                cartogram[f"AR{cell.number}"] = cell.tvs.ar if cell.tvs.ar else "-"
+            else:
+                cartogram[f"TVS{cell.number}"] = "-"
+                cartogram[f"AR{cell.number}"] = "-"
             return cartogram
 
         for cell in self.outer_layer:
-            if not cell.is_empty():
-                cartogram = add_cell(cartogram, cell, False)
-            else:
-                cartogram = add_cell(cartogram, cell, True)
+            cartogram = add_cell(cartogram, cell)
 
         for cell in self.inner_layer:
-            if not cell.is_empty():
-                cartogram = add_cell(cartogram, cell, False)
-            else:
-                cartogram = add_cell(cartogram, cell, True)
+            cartogram = add_cell(cartogram, cell)
 
         cartogram["n"] = self.number
 
