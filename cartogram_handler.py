@@ -125,17 +125,22 @@ def get_places(places_gen: dict, *args):
     return places_hash
 
 
-def fill_bv_section(map: dict[str, str], template_name: Literal["b03", "b01", "b02"]):
+def fill_bv_section(
+        map: dict[str, str], section_name: Literal["b03", "b01", "b02"],
+        mode: Literal["initial", "final"]
+):
     """
     Заполняет картограмму БВ по данным в полученном словаре. Результат сохраняет в папку result.
     :param map: dict[str, str] старый текст - новый текст словарь картограммы
-    :param template_name: название шаблоона Literal["b03", "b01", "b02"]
+    :param section_name: название шаблоона Literal["b03", "b01", "b02"]
+    :param mode: метка для обозначения заполнения начальной или конечной картограммы
     :return: None
     """
-    template = os.path.join(os.path.curdir, "template", f"{template_name}.odt")
-    result = os.path.join(os.path.curdir, "output", f"Картограмма отсека {template_name} БВ.odt")
+    template = os.path.join(os.path.curdir, "template", f"{section_name}.odt")
+    result = os.path.join(os.path.curdir, "output", f"Начальная картограмма отсека {section_name} БВ.odt") \
+        if mode == "initial" \
+        else os.path.join(os.path.curdir, "output", f"Конечная картограмма отсека {section_name} БВ.odt")
     doc = load(template)
-
     textboxes = doc.getElementsByType(draw.TextBox)
     for textbox in textboxes:
         paragraphs = textbox.getElementsByType(text.P)
@@ -145,4 +150,4 @@ def fill_bv_section(map: dict[str, str], template_name: Literal["b03", "b01", "b
 
 
 if __name__ == "__main__":
-    fill_bv_section({"TVS48-117": "N123456789", "AR48-117": "N123456 2023г."}, "b03")
+    fill_bv_section({"TVS48-117": "N123456789", "AR48-117": "N123456 2023г."}, "b03", "initial")

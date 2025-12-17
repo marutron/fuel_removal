@@ -1,6 +1,7 @@
 import time
 import math
 import os
+from copy import copy
 from multiprocessing import Process
 from typing import Literal
 
@@ -187,14 +188,15 @@ def clear_folder_files(folder_path):
         print(f"Ошибка: {e}")
 
 
-def get_tvs_pool_for_final_state(input_pool: list[K]):
+def get_tvs_pool_for_final_state(input_pool: list[K], bv_hash: dict):
     """
     Формируем пул ТВС после вывоза ОТВС
     :param input_pool: list[K] - пул ТВС, сформированный из Топаз-файла
+    :param bv_hash: словарь с ТВС
     :return: list[K]
     """
     final_pool = []
-    for k in topaz_tvs_pool:
+    for k in input_pool:
         tvs_number = f"{k.tip.sort} + {k.tip.nomer} + {k.tip.indeks}"
         if bv_hash.get(tvs_number) is None:
             # побайтово меняем на нули информацию о выгруженных ТВС
@@ -223,14 +225,15 @@ def get_map(bv_hash: dict[str, TVS], mode: Literal["b03", "b01", "b02"]):
     for tvs in bv_hash.values():
         if places.get(f"TVS{tvs.coord}") is not None:
             places[f"TVS{tvs.coord}"] = tvs.number
-            places[f"AR{tvs.coord}"] = tvs.year_out if tvs.ar is None else f"{tvs.ar} {tvs.year_out}"
+            places[f"AR{tvs.coord}"] = f"{tvs.year_out}г." if tvs.ar is None else f"{tvs.ar} {tvs.year_out}г."
     return places
 
 
-def bv_sections_handler(bv_hash: dict[str, str]):
+def bv_sections_handler(bv_hash: dict[str, TVS], mode: Literal["initial", "final"]):
     """
     Заполняет картограммы отсеков БВ в отдельных процессах
     :param bv_hash:
+    :param mode: Literal["initial", "final"]
     :return:
     """
     # список для добавления порожденных процессов
@@ -242,7 +245,7 @@ def bv_sections_handler(bv_hash: dict[str, str]):
     section_name_gen = iter(section_names)
 
     for map in sections_maps:
-        prc = Process(target=fill_bv_section, args=(map, next(section_name_gen)))
+        prc = Process(target=fill_bv_section, args=(map, next(section_name_gen), mode))
         prc.start()
         prc_pool.append(prc)
 
@@ -254,14 +257,16 @@ def bv_sections_handler(bv_hash: dict[str, str]):
 if __name__ == "__main__":
     clear_folder_files(output_dir)
     topaz_tvs_pool = read_topaz(initial_state_file)
-    bv_hash = decode_tvs_pool(topaz_tvs_pool)
-    for_remove, tvs_count, bv_hash = get_tvs_to_remove(tvs_to_remove_file, bv_hash)
+    bv_hash_initial = decode_tvs_pool(topaz_tvs_pool)
+    for_remove, tvs_count, bv_hash_initial = get_tvs_to_remove(tvs_to_remove_file, bv_hash_initial)
     count = get_backup_tvs_count(tvs_count)
+    # копируем словарь т.к. будем удалять из него вывезенные ТВС
+    bv_hash_final = copy(bv_hash_initial)
 
     # замеряем время началы работы программы
     start = time.perf_counter()
 
-    base_remove, backup = get_backup_tvs(count, for_remove, bv_hash)
+    base_remove, backup = get_backup_tvs(count, for_remove, bv_hash_final)
     containers = []
     iterator = 1
 
@@ -270,7 +275,7 @@ if __name__ == "__main__":
         tvs_pool = []
         for number in remove_lst:
             try:
-                tvs_pool.append(bv_hash.pop(number))
+                tvs_pool.append(bv_hash_final.pop(number))
             except KeyError as err:
                 print(f"Запрашиваемая на вывоз ТВС '{number}' не найдена в БВ. Проверьте данные.")
 
@@ -278,11 +283,14 @@ if __name__ == "__main__":
         for container in new_containers:
             container.fill_cells()
         containers.extend(new_containers)
-    result_file_handler(result_file, containers, backup)
-    bv_sections_handler(bv_hash)
+    # result_file_handler(result_file, containers, backup)
+
+    # заполняем картограммы отсеков БВ
+    bv_sections_handler(bv_hash_initial, "initial")
+    bv_sections_handler(bv_hash_final, "final")
 
     # записываем данные в файл ТОПАЗ
-    final_pool = get_tvs_pool_for_final_state(topaz_tvs_pool)
+    final_pool = get_tvs_pool_for_final_state(topaz_tvs_pool, bv_hash_final)
     with open(final_state_file, "wb") as file:
         file.writelines(final_pool)
 
