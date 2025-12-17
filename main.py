@@ -2,8 +2,10 @@ import time
 import math
 import os
 from multiprocessing import Process
+from typing import Literal
 
-from classes import TVS
+from cartogram_handler import get_places, b02_places_gen, b03_places_gen, b01_places_gen, fill_bv_section
+from classes import TVS, K
 from equalizer import equalizer_main
 from table_handler import add_table
 from topaz_file_handler import read_topaz, decode_tvs_pool
@@ -12,7 +14,7 @@ cur_dir = os.getcwd()
 input_dir = os.path.join(cur_dir, "input")
 output_dir = os.path.join(cur_dir, "output")
 initial_state_file = os.path.join(input_dir, "initial_state")
-final_tate_file = os.path.join(output_dir, "final_state")
+final_state_file = os.path.join(output_dir, "final_state")
 tvs_to_remove_file = os.path.join(input_dir, "tvs_to_remove.txt")
 result_file = os.path.join(output_dir, "result.txt")
 mp_file = os.path.join(output_dir, "mp_file.mp")
@@ -185,6 +187,70 @@ def clear_folder_files(folder_path):
         print(f"Ошибка: {e}")
 
 
+def get_tvs_pool_for_final_state(input_pool: list[K]):
+    """
+    Формируем пул ТВС после вывоза ОТВС
+    :param input_pool: list[K] - пул ТВС, сформированный из Топаз-файла
+    :return: list[K]
+    """
+    final_pool = []
+    for k in topaz_tvs_pool:
+        tvs_number = f"{k.tip.sort} + {k.tip.nomer} + {k.tip.indeks}"
+        if bv_hash.get(tvs_number) is None:
+            # побайтово меняем на нули информацию о выгруженных ТВС
+            # final_pool.append(k.replace_by_zero())
+            final_pool.append(k.encode())
+        else:
+            final_pool.append(k.encode())
+    return final_pool
+
+
+def get_map(bv_hash: dict[str, TVS], mode: Literal["b03", "b01", "b02"]):
+    """
+    Получает словарь для заполнения отсека БВ вида: dict[(TVS_coord, TVS_number), (AR_coord, AR_number)]
+    :param bv_hash: словарь ТВС, находящихся в отсеке
+    :param mode: номер отсека ["b03", "b01", "b02"]
+    :return: словарь, содержащий все ячейки отсека - заполненный значениями или пробелами (для пустых ячеек)
+    """
+    match mode:
+        case "b03":
+            places = get_places(b03_places_gen)
+        case "b01":
+            places = get_places(b01_places_gen)
+        case "b02":
+            places = get_places(b02_places_gen)
+
+    for tvs in bv_hash.values():
+        if places.get(f"TVS{tvs.coord}") is not None:
+            places[f"TVS{tvs.coord}"] = tvs.number
+            places[f"AR{tvs.coord}"] = tvs.year_out if tvs.ar is None else f"{tvs.ar} {tvs.year_out}"
+    return places
+
+
+def bv_sections_handler(bv_hash: dict[str, str]):
+    """
+    Заполняет картограммы отсеков БВ в отдельных процессах
+    :param bv_hash:
+    :return:
+    """
+    # список для добавления порожденных процессов
+    prc_pool = []
+
+    section_names = ["b03", "b01", "b02"]
+    sections_maps = [get_map(bv_hash, section_name) for section_name in section_names]
+
+    section_name_gen = iter(section_names)
+
+    for map in sections_maps:
+        prc = Process(target=fill_bv_section, args=(map, next(section_name_gen)))
+        prc.start()
+        prc_pool.append(prc)
+
+    # дожидаемся создания всех файлов
+    for prc in prc_pool:
+        prc.join()
+
+
 if __name__ == "__main__":
     clear_folder_files(output_dir)
     topaz_tvs_pool = read_topaz(initial_state_file)
@@ -213,18 +279,11 @@ if __name__ == "__main__":
             container.fill_cells()
         containers.extend(new_containers)
     result_file_handler(result_file, containers, backup)
+    bv_sections_handler(bv_hash)
 
-    # побайтово меняем на нули информацию о выгруженных ТВС
-    final_pool = []
-    for k in topaz_tvs_pool:
-        tvs_number = f"{k.tip.sort} + {k.tip.nomer} + {k.tip.indeks}"
-        if bv_hash.get(tvs_number) is None:
-            # final_pool.append(k.replace_by_zero())
-            final_pool.append(k.encode())
-        else:
-            final_pool.append(k.encode())
-
-    with open(final_tate_file, "wb") as file:
+    # записываем данные в файл ТОПАЗ
+    final_pool = get_tvs_pool_for_final_state(topaz_tvs_pool)
+    with open(final_state_file, "wb") as file:
         file.writelines(final_pool)
 
     # вычисляем время выполнения программы
