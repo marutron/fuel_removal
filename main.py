@@ -5,7 +5,7 @@ from copy import copy
 from multiprocessing import Process
 from typing import Literal
 
-from cartogram_handler import get_places, b02_places_gen, b03_places_gen, b01_places_gen, fill_bv_section
+from cartogram_handler import get_places, fill_bv_section, get_b02_places, get_b01_places, get_b03_places
 from classes import TVS, K
 from equalizer import equalizer_main
 from table_handler import add_table
@@ -216,11 +216,11 @@ def get_map(bv_hash: dict[str, TVS], mode: Literal["b03", "b01", "b02"]):
     """
     match mode:
         case "b03":
-            places = get_places(b03_places_gen)
+            places = get_places(get_b03_places)
         case "b01":
-            places = get_places(b01_places_gen)
+            places = get_places(get_b01_places)
         case "b02":
-            places = get_places(b02_places_gen)
+            places = get_places(get_b02_places)
 
     for tvs in bv_hash.values():
         if places.get(f"TVS{tvs.coord}") is not None:
@@ -283,7 +283,8 @@ if __name__ == "__main__":
         for container in new_containers:
             container.fill_cells()
         containers.extend(new_containers)
-    # result_file_handler(result_file, containers, backup)
+    # заполняем файлы с результатами
+    result_file_handler(result_file, containers, backup)
 
     # заполняем картограммы отсеков БВ
     bv_sections_handler(bv_hash_initial, "initial")
