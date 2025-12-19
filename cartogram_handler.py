@@ -92,7 +92,7 @@ def get_b01_places():
 
 
 # реверсивное заполнение!
-def get_b01_gp():
+def get_b01_gp_places():
     return {
         122: (row for row in range(63, 73, 1)),
         124: (row for row in range(63, 73, 1)),
@@ -120,19 +120,22 @@ def get_b02_places():
     }
 
 
-def get_places(places_func, *args):
+def get_places(places_func, places_hash=None, *args):
     """
     Формирует список мест отсека
     """
-    places_hash: dict[str, str] = {}
-
     # получаем места картограммы отсека БВ
+    if places_hash is None:
+        places_hash = {}
+    if places_hash is None:
+        places_hash = {}
     places_gen = places_func()
     for item, val in places_gen.items():
         for elm in val:
             if "gp" in args:
-                # todo дополнить секцию ГП TVS, AR
-                places_hash[f"{elm}-{item}"] = " "
+                places_hash[f"TVS{elm}-{item}"] = " "
+                places_hash[f"AR{elm}-{item}"] = " "
+                places_hash[f"GP{elm}-{item}"] = " "
             else:
                 places_hash[f"TVS{item}-{elm}"] = " "
                 places_hash[f"AR{item}-{elm}"] = " "

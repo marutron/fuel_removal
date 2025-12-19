@@ -5,7 +5,8 @@ from copy import copy
 from multiprocessing import Process
 from typing import Literal
 
-from cartogram_handler import get_places, fill_bv_section, get_b02_places, get_b01_places, get_b03_places
+from cartogram_handler import get_places, fill_bv_section, get_b02_places, get_b01_places, get_b03_places, \
+    get_b03_gp_places, get_b01_gp_places
 from classes import TVS, K
 from equalizer import equalizer_main
 from table_handler import add_table
@@ -207,7 +208,108 @@ def get_tvs_pool_for_final_state(input_pool: list[K], bv_hash: dict):
     return final_pool
 
 
-def get_map(bv_hash: dict[str, TVS], mode: Literal["b03", "b01", "b02"]):
+def get_b2_gp():
+    return {
+        # b03
+        # телега 122
+        "TVS45-122": "ГП № 1",
+        "GP46-122": "ГП № 2",
+        "GP47-122": "ГП № 3",
+        "GP48-122": "ГП № 4",
+        "TVS49-122": "ГП № 5",
+        "GP50-122": "ГП № 6",
+        "GP51-122": "ГП № 7",
+        "GP52-122": "ГП № 8",
+        "GP53-122": "ГП № 9",
+        "TVS54-122": "ГП № 10",
+        # телега 124
+        "GP47-124": "ГП № 11",
+        "GP48-124": "ГП № 12",
+        "TVS49-124": "ГП № 13",
+        "TVS50-124": "Ячейка для",
+        "AR50-124": "ГП № 14",
+        "TVS51-124": "Ячейка для",
+        "AR51-124": "ГП № 15",
+        "TVS52-124": "Ячейка для",
+        "AR52-124": "ГП № 16",
+        "TVS53-124": "ГП № 17",
+        "TVS54-124": "ГП № 18",
+        # телега 126
+        "TVS47-126": "Ячейка для",
+        "AR47-126": "ГП № 19",
+        "TVS48-126": "Ячейка для",
+        "AR48-126": "ГП № 20",
+        "TVS53-126": "Ячейка для",
+        "AR53-126": "ГП № 21",
+
+        # b01
+        # телега 122
+        "TVS63-122": "ГП № 22*",
+        "TVS64-122": "Ячейка для",
+        "AR64-122": "ГП № 23",
+        "TVS65-122": "Ячейка для",
+        "AR65-122": "ГП № 24",
+        "TVS66-122": "Ячейка для",
+        "AR66-122": "ГП № 25",
+        "TVS67-122": "Ячейка для",
+        "AR67-122": "ГП № 26",
+        "TVS68-122": "Ячейка для",
+        "AR68-122": "ГП № 27",
+        "TVS69-122": "ГП № 28",
+        "TVS70-122": "ГП № 29",
+        "TVS71-122": "ГП № 30",
+        "TVS72-122": "ГП № 31",
+        # телега 124
+        "TVS63-124": "ГП № 32*",
+        "TVS64-124": "Ячейка для",
+        "AR64-124": "ГП № 33",
+        "TVS65-124": "Ячейка для",
+        "AR65-124": "ГП № 34",
+        "TVS66-124": "Ячейка для",
+        "AR66-124": "ГП № 35",
+        "TVS67-124": "Ячейка для",
+        "AR67-124": "ГП № 36",
+        "TVS68-124": "Ячейка для",
+        "AR68-124": "ГП № 37",
+        "TVS69-124": "ГП № 38",
+        "TVS70-124": "ГП № 39",
+        "TVS71-124": "ГП № 40",
+        "TVS72-124": "ГП № 41",
+        # телега 126
+        "TVS63-126": "Ячейка для",
+        "AR63-126": "ГП № 42",
+        "TVS64-126": "Ячейка для",
+        "AR64-126": "ГП № 43",
+        "TVS65-126": "Ячейка для",
+        "AR65-126": "ГП № 44",
+        "TVS66-126": "Ячейка для",
+        "AR66-126": "ГП № 45",
+        "TVS67-126": "Ячейка для",
+        "AR67-126": "ГП № 46",
+        "TVS68-126": "Ячейка для",
+        "AR68-126": "ГП № 47",
+        "TVS69-126": "Ячейка для",
+        "AR69-126": "ГП № 48",
+        "TVS70-126": "Ячейка для",
+        "AR70-126": "ГП № 49",
+        "TVS71-126": "ГП № 50",
+        "AR71-126": "ПС СУЗ 03105",
+    }
+
+
+def get_additional_hash(block_number: int) -> dict[str, str]:
+    match block_number:
+        case 1:
+            pass
+        case 2:
+            return get_b2_gp()
+        case 3:
+            pass
+        case 4:
+            pass
+
+
+def get_map(bv_hash: dict[str, TVS], block_number: int, mode: Literal["b03", "b01", "b02"]):
     """
     Получает словарь для заполнения отсека БВ вида: dict[(TVS_coord, TVS_number), (AR_coord, AR_number)]
     :param bv_hash: словарь ТВС, находящихся в отсеке
@@ -217,19 +319,29 @@ def get_map(bv_hash: dict[str, TVS], mode: Literal["b03", "b01", "b02"]):
     match mode:
         case "b03":
             places = get_places(get_b03_places)
+            places = get_places(get_b03_gp_places, places, "gp")
         case "b01":
             places = get_places(get_b01_places)
+            places = get_places(get_b01_gp_places, places, "gp")
         case "b02":
             places = get_places(get_b02_places)
 
+    additional_hash = get_additional_hash(block_number)
+
     for tvs in bv_hash.values():
+        # тут не могу использовать небезопасныы координаты, т.к. bv_hash содержит много паразитных данных
         if places.get(f"TVS{tvs.coord}") is not None:
             places[f"TVS{tvs.coord}"] = tvs.number
             places[f"AR{tvs.coord}"] = f"{tvs.year_out}г." if tvs.ar is None else f"{tvs.ar} {tvs.year_out}г."
+
+    # специально использую небезопасные координаты, чтобы отлавливать ошибки здесь, а не на картограмме
+    for coord, data in additional_hash.items():
+        places[coord] = data
+
     return places
 
 
-def bv_sections_handler(bv_hash: dict[str, TVS], mode: Literal["initial", "final"]):
+def bv_sections_handler(bv_hash: dict[str, TVS], block_number: int, mode: Literal["initial", "final"]):
     """
     Заполняет картограммы отсеков БВ в отдельных процессах
     :param bv_hash:
@@ -240,7 +352,7 @@ def bv_sections_handler(bv_hash: dict[str, TVS], mode: Literal["initial", "final
     prc_pool = []
 
     section_names = ["b03", "b01", "b02"]
-    sections_maps = [get_map(bv_hash, section_name) for section_name in section_names]
+    sections_maps = [get_map(bv_hash, block_number, section_name) for section_name in section_names]
 
     section_name_gen = iter(section_names)
 
@@ -254,12 +366,25 @@ def bv_sections_handler(bv_hash: dict[str, TVS], mode: Literal["initial", "final
         prc.join()
 
 
+def input_block_number() -> int:
+    while True:
+        block_number = input("Введите номер блока: ")
+        try:
+            block_number = int(block_number)
+        except:
+            print("Нужно ввести цифру 1, 2, 3 или 4")
+        else:
+            if block_number == 1 or block_number == 2 or block_number == 3 or block_number == 4:
+                return block_number
+
+
 if __name__ == "__main__":
     clear_folder_files(output_dir)
     topaz_tvs_pool = read_topaz(initial_state_file)
     bv_hash_initial = decode_tvs_pool(topaz_tvs_pool)
     for_remove, tvs_count, bv_hash_initial = get_tvs_to_remove(tvs_to_remove_file, bv_hash_initial)
     count = get_backup_tvs_count(tvs_count)
+    block_number = input_block_number()
     # копируем словарь т.к. будем удалять из него вывезенные ТВС
     bv_hash_final = copy(bv_hash_initial)
 
@@ -287,8 +412,8 @@ if __name__ == "__main__":
     result_file_handler(result_file, containers, backup)
 
     # заполняем картограммы отсеков БВ
-    bv_sections_handler(bv_hash_initial, "initial")
-    bv_sections_handler(bv_hash_final, "final")
+    bv_sections_handler(bv_hash_initial, block_number, "initial")
+    bv_sections_handler(bv_hash_final, block_number, "final")
 
     # записываем данные в файл ТОПАЗ
     final_pool = get_tvs_pool_for_final_state(topaz_tvs_pool, bv_hash_final)
