@@ -55,17 +55,3 @@ def decode_tvs_pool(raw_pool: list[K], codepage: str = "cp1251"):
         else:
             parsed_pool.setdefault(parsed_tvs.number, parsed_tvs)
     return parsed_pool
-
-
-if __name__ == "__main__":
-    input_file = "ZAGR96TVS"
-    codepage = "cp1251"
-
-    raw_pool = read_topaz(input_file)
-    tvs_dict = decode_tvs_pool(raw_pool, codepage)
-
-    tvs = tvs_dict["53-122"]
-    a = tvs.k.encode()
-    b = tvs.k.replace_by_zero()
-
-    pass
