@@ -557,3 +557,15 @@ class Container:
                 permutations = add_cell(permutations, cell)
 
         return permutations
+
+    def get_passport_data(self):
+        """
+        Заполняет словарь для формирования паспорта упаковки
+        :return:
+        """
+        data = {}
+        for cell in self.outer_layer:
+            pass
+        for cell in self.inner_layer:
+            pass
+        data["container_number"] = self.number
