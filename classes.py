@@ -427,9 +427,9 @@ class TVS:
         :return:
         """
         return {
-            f"number_{cell_number}": self.number,
-            f"cher_{cell_number}": self.cher,
-            f"ar_{cell_number}": self.ar if self.ar else " ",
+            f"number{cell_number}": self.number,
+            f"cher{cell_number}": self.cher,
+            f"ar{cell_number}": self.ar if self.ar else " ",
             f"uo2_{cell_number}": round(self.uo2 / 1000, 3),
             f"tvs_mass_{cell_number}": round(self.mass, 1),
             f"u_init_{cell_number}": round(self.u85, 1),
@@ -438,17 +438,17 @@ class TVS:
             f"date_in_{cell_number}": self.date_in,
             f"date_out_{cell_number}": self.date_out,
             f"burn_{cell_number}": round(self.burn, 2),
-            f"m_u_{cell_number}": round(self.u5 + self.u8, 1),
+            f"mU{cell_number}": round(self.u5 + self.u8, 1),
             f"u5_{cell_number}": round(self.u5, 1),
             f"u8_{cell_number}": round(self.u8, 1),
-            f"m_pu_{cell_number}": round(self.pu8 + self.pu9 + self.pu0 + self.pu1 + self.pu2, 1),
+            f"mPu{cell_number}": round(self.pu8 + self.pu9 + self.pu0 + self.pu1 + self.pu2, 1),
             f"pu8_{cell_number}": round(self.pu8, 1),
             f"pu9_{cell_number}": round(self.pu9, 1),
             f"pu0_{cell_number}": round(self.pu0, 1),
             f"pu1_{cell_number}": round(self.pu1, 1),
             f"pu2_{cell_number}": round(self.pu2, 1),
             f"heat_{cell_number}": round(self.heat, 2),
-            f"property_{cell_number}": self.property
+            f"property{cell_number}": self.property
         }
 
 
