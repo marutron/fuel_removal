@@ -346,6 +346,14 @@ class TVS:
         self.coord = f"{k.most[0]}-{k.tel[0]}"
         self.year_out = k.datout[-4:].decode(codepage)
 
+        len_cher = int(k.cher[0])
+        self.cher = k.cher[1:len_cher + 1].decode(codepage)
+        self.production_date = k.datap[1:].decode(codepage)
+        self.date_in = k.datin[1:].decode(codepage)
+        self.date_out = k.datout[1:].decode(codepage)
+        self.burn = self.parse_real48(k.shlak)
+        self.property = 'АО "Концерн Росэнергоатом"' if k.kod_sob == b" " else "Федеральная"
+
         self.rn = k.rn[0]  # расчетный номер (симетрия 60)
         self.n360 = k.n360[0]  # номер в АЗ
         self.complete_camp = k.otrkam[0]  # отработано кампаний
@@ -356,12 +364,12 @@ class TVS:
         self.u5 = self.parse_real48(k.u5)  # масса U235 в ТВС [грамм]
         self.u6 = self.parse_real48(k.u6)  # масса U236 в ТВС [грамм]
         self.u8 = self.parse_real48(k.u8)  # масса U238 в ТВС [грамм]
-        self.p8 = self.parse_real48(k.p8)  # масса Pu238 в ТВС [грамм]
-        self.p9 = self.parse_real48(k.p9)  # масса Pu239 в ТВС [грамм]
-        self.p0 = self.parse_real48(k.p0)  # масса Pu240 в ТВС [грамм]
-        self.p1 = self.parse_real48(k.p1)  # масса Pu241 в ТВС [грамм]
-        self.p2 = self.parse_real48(k.p2)  # масса Pu242 в ТВС [грамм]
-        self.summ_isotopes = self.u5 + self.u8 + self.p8 + self.p9 + self.p0 + self.p1 + self.p2
+        self.pu8 = self.parse_real48(k.p8)  # масса Pu238 в ТВС [грамм]
+        self.pu9 = self.parse_real48(k.p9)  # масса Pu239 в ТВС [грамм]
+        self.pu0 = self.parse_real48(k.p0)  # масса Pu240 в ТВС [грамм]
+        self.pu1 = self.parse_real48(k.p1)  # масса Pu241 в ТВС [грамм]
+        self.pu2 = self.parse_real48(k.p2)  # масса Pu242 в ТВС [грамм]
+        self.summ_isotopes = self.u5 + self.u8 + self.pu8 + self.pu9 + self.pu0 + self.pu1 + self.pu2
         self.mass = self.parse_real48(k.gdo)  # масса ТВС [кг]
         self.heat = 0.0  # тепловыделение ТВС, задается только для ТВС, подлежащих отправке
 
@@ -412,6 +420,36 @@ class TVS:
 
         # Итоговый результат: мантисса * 2^экспонента
         return mantissa * (2.0 ** exponent)
+
+    def get_passport(self, cell_number: int) -> dict:
+        """
+        Собирает данные для составления паспорта упаковки
+        :return:
+        """
+        return {
+            f"number_{cell_number}": self.number,
+            f"cher_{cell_number}": self.cher,
+            f"ar_{cell_number}": self.ar if self.ar else " ",
+            f"uo2_{cell_number}": round(self.uo2 / 1000, 3),
+            f"tvs_mass_{cell_number}": round(self.mass, 1),
+            f"u_init_{cell_number}": round(self.u85, 1),
+            f"u5_init_{cell_number}": round(self.u5c, 1),
+            f"prod_{cell_number}": self.production_date,
+            f"date_in_{cell_number}": self.date_in,
+            f"date_out_{cell_number}": self.date_out,
+            f"burn_{cell_number}": round(self.burn, 2),
+            f"m_u_{cell_number}": round(self.u5 + self.u8, 1),
+            f"u5_{cell_number}": round(self.u5, 1),
+            f"u8_{cell_number}": round(self.u8, 1),
+            f"m_pu_{cell_number}": round(self.pu8 + self.pu9 + self.pu0 + self.pu1 + self.pu2, 1),
+            f"pu8_{cell_number}": round(self.pu8, 1),
+            f"pu9_{cell_number}": round(self.pu9, 1),
+            f"pu0_{cell_number}": round(self.pu0, 1),
+            f"pu1_{cell_number}": round(self.pu1, 1),
+            f"pu2_{cell_number}": round(self.pu2, 1),
+            f"heat_{cell_number}": round(self.heat, 2),
+            f"property_{cell_number}": self.property
+        }
 
 
 class Cell:
@@ -558,14 +596,18 @@ class Container:
 
         return permutations
 
-    def get_passport_data(self):
+    def get_passport_data(self) -> dict[str, str]:
         """
         Заполняет словарь для формирования паспорта упаковки
         :return:
         """
         data = {}
         for cell in self.outer_layer:
-            pass
+            if cell.tvs is not None:
+                data.update(cell.tvs.get_passport(cell.number))
         for cell in self.inner_layer:
-            pass
+            if cell.tvs is not None:
+                data.update(cell.tvs.get_passport(cell.number))
+        data["heat_overall"] = self.heat
         data["container_number"] = self.number
+        return data

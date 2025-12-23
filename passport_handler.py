@@ -14,9 +14,9 @@ def fill_passport(data: dict[str, str]):
     :return: None
     """
     template = os.path.join(os.path.curdir, "template", "passport_tk.odt")
-    result = os.path.join(os.path.curdir, "output", f"Паспорт ТУК № {data.get("container_number")}.odt")
+    result = os.path.join(os.path.curdir, "output", "Паспорта ТУК", f"Паспорт ТУК № {data.get("container_number")}.odt")
     doc = load(template)
     paragraphs = doc.getElementsByType(text.P)
     for p in paragraphs:
-        set_text(p, map)
+        set_text(p, data)
     doc.save(result)

@@ -9,6 +9,7 @@ from cartogram_handler import fill_bv_section
 from cartogram_shapers import get_map
 from classes import TVS, K
 from equalizer import equalizer_main
+from passport_handler import fill_passport
 from services import input_block_number, clear_folder_files, get_backup_tvs_count, get_tvs_to_remove, get_backup_tvs
 from table_handler import add_table
 from topaz_file_handler import read_topaz, decode_tvs_pool
@@ -58,6 +59,9 @@ def result_file_handler(result_file, containers_pool, backup):
             permutations = container.get_permutations(oper_gen)
             # делаем запись в файл для МП
             container.add_mp_data(oper_gen_mp, mp_file)
+
+            passport_data = container.get_passport_data()
+            fill_passport(passport_data)
 
             # заполняем таблицы перестановок и картограммы для ТК-13 в режиме многопроцессности
             prc = Process(target=add_table, args=(permutations, tk_data, container.number))
@@ -172,3 +176,7 @@ if __name__ == "__main__":
     end = time.perf_counter()
     elapsed = end - start
     print(f"Время выполнения: {elapsed:.5f} c.")
+
+    # todo
+    # 1. паспорт упаковки
+    # 2. запись файла ТОПАЗ
