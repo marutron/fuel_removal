@@ -5,11 +5,10 @@ from copy import copy
 from multiprocessing import Process
 from typing import Literal
 
-from cartogram_handler import fill_bv_section
+from text_replacers import fill_bv_section, fill_passport
 from cartogram_shapers import get_map
 from classes import TVS, K
 from equalizer import equalizer_main
-from passport_handler import fill_passport
 from services import input_block_number, clear_folder_files, get_backup_tvs_count, get_tvs_to_remove, get_backup_tvs
 from table_handler import add_table
 from topaz_file_handler import read_topaz, decode_tvs_pool

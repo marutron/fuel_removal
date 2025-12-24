@@ -5,7 +5,7 @@ from odf.text import P
 from odf.opendocument import load
 from odf.table import *
 
-from cartogram_handler import set_text
+from text_replacers import set_text
 
 
 class ODFHandler:
