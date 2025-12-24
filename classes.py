@@ -429,26 +429,26 @@ class TVS:
         return {
             f"number{cell_number}": self.number,
             f"cher{cell_number}": self.cher,
-            f"ar{cell_number}": self.ar if self.ar else " ",
-            f"uo2_{cell_number}": round(self.uo2 / 1000, 3),
-            f"tvs_mass_{cell_number}": round(self.mass, 1),
-            f"u_init_{cell_number}": round(self.u85, 1),
-            f"u5_init_{cell_number}": round(self.u5c, 1),
+            f"ar{cell_number}": self.ar if self.ar else "-",
+            f"uo2_{cell_number}": str(round(self.uo2 / 1000, 3)).replace(".", ","),
+            f"tvs_mass_{cell_number}": str(round(self.mass, 1)).replace(".", ","),
+            f"u_init_{cell_number}": str(round(self.u85, 1)).replace(".", ","),
+            f"u5_init_{cell_number}": str(round(self.u5c, 1)).replace(".", ","),
             f"prod_{cell_number}": self.production_date,
             f"date_in_{cell_number}": self.date_in,
             f"date_out_{cell_number}": self.date_out,
-            f"burn_{cell_number}": round(self.burn, 2),
-            f"mU{cell_number}": round(self.u5 + self.u8, 1),
-            f"u5_{cell_number}": round(self.u5, 1),
-            f"u8_{cell_number}": round(self.u8, 1),
-            f"mPu{cell_number}": round(self.pu8 + self.pu9 + self.pu0 + self.pu1 + self.pu2, 1),
-            f"pu8_{cell_number}": round(self.pu8, 1),
-            f"pu9_{cell_number}": round(self.pu9, 1),
-            f"pu0_{cell_number}": round(self.pu0, 1),
-            f"pu1_{cell_number}": round(self.pu1, 1),
-            f"pu2_{cell_number}": round(self.pu2, 1),
-            f"heat_{cell_number}": round(self.heat, 2),
-            f"property{cell_number}": self.property
+            f"burn_{cell_number}": str(round(self.burn, 2)).replace(".", ","),
+            f"mU{cell_number}": str(round(self.u5 + self.u8, 1)).replace(".", ","),
+            f"u5_{cell_number}": str(round(self.u5, 1)).replace(".", ","),
+            f"u8_{cell_number}": str(round(self.u8, 1)).replace(".", ","),
+            f"mPu{cell_number}": str(round(self.pu8 + self.pu9 + self.pu0 + self.pu1 + self.pu2, 1)).replace(".", ","),
+            f"pu8_{cell_number}": str(round(self.pu8, 1)).replace(".", ","),
+            f"pu9_{cell_number}": str(round(self.pu9, 1)).replace(".", ","),
+            f"pu0_{cell_number}": str(round(self.pu0, 1)).replace(".", ","),
+            f"pu1_{cell_number}": str(round(self.pu1, 1)).replace(".", ","),
+            f"pu2_{cell_number}": str(round(self.pu2, 1)).replace(".", ","),
+            f"heat_{cell_number}": str(round(self.heat, 2)).replace(".", ","),
+            f"prop{cell_number}": self.property
         }
 
 
@@ -462,6 +462,36 @@ class Cell:
 
     def is_empty(self):
         return True if self.tvs is None else False
+
+    def get_empty_passport(self) -> dict:
+        """
+        Собирает данные для составления паспорта упаковки
+        :return:
+        """
+        return {
+            f"number{self.number}": "-",
+            f"cher{self.number}": "-",
+            f"ar{self.number}": "-",
+            f"uo2_{self.number}": "-",
+            f"tvs_mass_{self.number}": "-",
+            f"u_init_{self.number}": "-",
+            f"u5_init_{self.number}": "-",
+            f"prod_{self.number}": "-",
+            f"date_in_{self.number}": "-",
+            f"date_out_{self.number}": "-",
+            f"burn_{self.number}": "-",
+            f"mU{self.number}": "-",
+            f"u5_{self.number}": "-",
+            f"u8_{self.number}": "-",
+            f"mPu{self.number}": "-",
+            f"pu8_{self.number}": "-",
+            f"pu9_{self.number}": "-",
+            f"pu0_{self.number}": "-",
+            f"pu1_{self.number}": "-",
+            f"pu2_{self.number}": "-",
+            f"heat_{self.number}": "-",
+            f"prop{self.number}": "-",
+        }
 
 
 class Container:
@@ -605,9 +635,13 @@ class Container:
         for cell in self.outer_layer:
             if cell.tvs is not None:
                 data.update(cell.tvs.get_passport(cell.number))
+            else:
+                data.update(cell.get_empty_passport())
         for cell in self.inner_layer:
             if cell.tvs is not None:
                 data.update(cell.tvs.get_passport(cell.number))
-        data["heat_overall"] = self.heat
+            else:
+                data.update(cell.get_empty_passport())
+        data["heat_overall"] = str(round(self.heat, 2)).replace(".", ",")
         data["container_number"] = self.number
         return data

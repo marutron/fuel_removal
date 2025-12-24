@@ -135,8 +135,10 @@ if __name__ == "__main__":
     topaz_tvs_pool = read_topaz(initial_state_file)
     bv_hash_initial = decode_tvs_pool(topaz_tvs_pool)
     for_remove, tvs_count, bv_hash_initial = get_tvs_to_remove(tvs_to_remove_file, bv_hash_initial)
-    count = get_backup_tvs_count(tvs_count)
-    block_number = input_block_number()
+    # count = get_backup_tvs_count(tvs_count)
+    count = 1
+    # block_number = input_block_number()
+    block_number = 2
     # копируем словарь т.к. будем удалять из него вывезенные ТВС
     bv_hash_final = copy(bv_hash_initial)
 
