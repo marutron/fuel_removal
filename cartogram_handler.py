@@ -1,4 +1,5 @@
 import os.path
+from typing import Literal
 
 from odf.opendocument import load
 from odf import text, draw
@@ -38,23 +39,25 @@ def set_text(element, new_text: dict):
             node.data = new_text[node.data]
 
 
-def fill_bv(replace_text: dict):
+def fill_bv_section(
+        map: dict[str, str], section_name: Literal["b03", "b01", "b02"],
+        mode: Literal["initial", "final"]
+):
     """
     Заполняет картограмму БВ по данным в полученном словаре. Результат сохраняет в папку result.
-    :param replace_text: dict[str, str] старый текст - новый текст
+    :param map: dict[str, str] старый текст - новый текст словарь картограммы
+    :param section_name: название шаблоона Literal["b03", "b01", "b02"]
+    :param mode: метка для обозначения заполнения начальной или конечной картограммы
     :return: None
     """
-    template = os.path.join(os.path.curdir, "template", "map.odt")
-    result = os.path.join(os.path.curdir, "result", "Картограмма БВ.odt")
+    template = os.path.join(os.path.curdir, "template", f"{section_name}.odt")
+    result = os.path.join(os.path.curdir, "output", f"Начальная картограмма отсека {section_name} БВ.odt") \
+        if mode == "initial" \
+        else os.path.join(os.path.curdir, "output", f"Конечная картограмма отсека {section_name} БВ.odt")
     doc = load(template)
-
     textboxes = doc.getElementsByType(draw.TextBox)
     for textbox in textboxes:
         paragraphs = textbox.getElementsByType(text.P)
         for p in paragraphs:
-            set_text(p, replace_text)
+            set_text(p, map)
     doc.save(result)
-
-
-if __name__ == "__main__":
-    fill_bv({"TVS48-117": "N123456789", "AR48-117": "N123456 2023г."})

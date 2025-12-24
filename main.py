@@ -1,124 +1,27 @@
 import time
 import math
 import os
+from copy import copy
 from multiprocessing import Process
+from typing import Literal
 
-from classes import TVS
+from cartogram_handler import fill_bv_section
+from cartogram_shapers import get_map
+from classes import TVS, K
 from equalizer import equalizer_main
+from passport_handler import fill_passport
+from services import input_block_number, clear_folder_files, get_backup_tvs_count, get_tvs_to_remove, get_backup_tvs
 from table_handler import add_table
+from topaz_file_handler import read_topaz, decode_tvs_pool
 
 cur_dir = os.getcwd()
-into_bv_file = os.path.join(cur_dir, "into_bv.txt")
-tvs_to_remove_file = os.path.join(cur_dir, "tvs_to_remove.txt")
-result_file = os.path.join(cur_dir, "result.txt")
-mp_file = os.path.join(cur_dir, "mp_file.mp")
-
-
-# Парсит файл ТВС в БВ в словарь
-def get_bv_tvs(filename):
-    bv_hash = {}
-    with open(filename) as bv_file:
-        lines = bv_file.readlines()[1::]
-        for line in lines:
-            split_line = line.split()
-            tvs_number = split_line[0] + split_line[1]
-            heat = float(split_line[11])
-            coordinates = f"{split_line[2]}-{split_line[3]}"
-            ps = split_line[12].strip()
-            u5 = float(split_line[4])
-            u8 = float(split_line[5])
-            pu8 = float(split_line[6])
-            pu9 = float(split_line[7])
-            pu0 = float(split_line[8])
-            pu1 = float(split_line[9])
-            pu2 = float(split_line[10])
-            tvs = TVS(tvs_number, heat, coordinates, ps, u5, u8, pu8, pu9, pu0, pu1, pu2)
-            bv_hash[tvs.number] = tvs
-    return bv_hash
-
-
-# Парсит файл с ТВС, помеченными для вывоза с АЭС
-def get_tvs_to_remove(filename):
-    tvs_counter = 0
-    with open(filename) as remove_file:
-        lines = remove_file.readlines()
-        restrictions = {}
-        last_restriction = 12
-        for line in lines:
-            line = line.strip()
-            if len(line) < 10:
-                try:
-                    last_restriction = int(line)
-                except ValueError:
-                    print(f"Ограничение задано неверно. Невозможно представить строку '{line}' как число")
-                restrictions.setdefault(last_restriction, [])
-            else:
-                tvs_counter += 1
-                try:
-                    restrictions[last_restriction].append(line.strip())
-                except KeyError:
-                    # задействуется в случае если в файле сразу начинаются ТВС, без задания количества ТВС в контейнере
-                    # в таком случае укладываем по 12 ТВС
-                    restrictions.setdefault(12, [])
-                    # специально не указывал 12 тут чтобы отлавливать ошибки неправильного парсинга и пр.
-                    restrictions[last_restriction].append(line.strip())
-        return restrictions, tvs_counter
-
-
-def get_backup_tvs_count(tvs_count):
-    """
-    Обработчик ввода количества резервных ТВС
-    :param tvs_count: количество ТВС для выгрузки из БВ
-    :return:
-    """
-    while True:
-        count = -10
-        try:
-            inp = input("Укажите количество резервных ТВС ")
-            count = int(inp)
-        except ValueError:
-            print(f"Невозможно распарсить '{inp}' как число. Повторите ввод.")
-        if count < 0 or count >= tvs_count:
-            print(f"Введите значение в диапазоне [0, {tvs_count - 1}]")
-        else:
-            return count
-
-
-# Выбирает из ТВС, готовящихся к вывозу с АЭС те, сумма ЯМ в которых наименьшая
-#   count - количество ТВС, которые надо направить в резерв
-def get_backup_tvs(count, for_remove, bv_hash):
-    # собираем из словаря с номерами ТВС список экземпляров TVS
-    all_tvs_for_remove = []
-    for tvs_lst in for_remove.values():
-        for tvs_number in tvs_lst:
-            try:
-                tvs = bv_hash[tvs_number]
-            except KeyError as err:
-                print(f"Не получается найти ТВС {tvs_number} в БВ!")
-                raise err
-            all_tvs_for_remove.append(tvs)
-    # сортируем полученный список по убыванию масс ЯМ
-    sorted_tvs = sorted(all_tvs_for_remove, key=lambda tvs: tvs.sum_isotopes, reverse=True)
-
-    # собираем в множество номера 'count' ТВС с минимальной суммой масс ЯМ
-    backup_numbers = set()
-    backup = []
-    while count > 0:
-        tvs = sorted_tvs.pop()
-        backup_numbers.add(tvs.number)
-        backup.append(tvs)
-        count -= 1
-
-    result_for_remove = {}
-    # собираем новый словарь номеров ТВС для вывоза, не включая в него ТВС, попавшие в backup
-    for key, tvs_lst in for_remove.items():
-        tvs_lst_new = []
-        for tvs_number in tvs_lst:
-            if tvs_number not in backup_numbers:
-                tvs_lst_new.append(tvs_number)
-        result_for_remove[key] = tvs_lst_new
-
-    return result_for_remove, backup
+input_dir = os.path.join(cur_dir, "input")
+output_dir = os.path.join(cur_dir, "output")
+initial_state_file = os.path.join(input_dir, "initial_state")
+final_state_file = os.path.join(output_dir, "final_state")
+tvs_to_remove_file = os.path.join(input_dir, "tvs_to_remove.txt")
+result_file = os.path.join(output_dir, "result.txt")
+mp_file = os.path.join(output_dir, "mp_file.mp")
 
 
 def operation_gen():
@@ -157,6 +60,9 @@ def result_file_handler(result_file, containers_pool, backup):
             # делаем запись в файл для МП
             container.add_mp_data(oper_gen_mp, mp_file)
 
+            passport_data = container.get_passport_data()
+            fill_passport(passport_data)
+
             # заполняем таблицы перестановок и картограммы для ТК-13 в режиме многопроцессности
             prc = Process(target=add_table, args=(permutations, tk_data, container.number))
             prc.start()
@@ -180,16 +86,64 @@ def result_file_handler(result_file, containers_pool, backup):
         prc.join()
 
 
-if __name__ == "__main__":
+def get_tvs_pool_for_final_state(input_pool: list[K], bv_hash: dict):
+    """
+    Формируем пул ТВС после вывоза ОТВС
+    :param input_pool: list[K] - пул ТВС, сформированный из Топаз-файла
+    :param bv_hash: словарь с ТВС
+    :return: list[K]
+    """
+    final_pool = []
+    for k in input_pool:
+        tvs_number = f"{k.tip.sort} + {k.tip.nomer} + {k.tip.indeks}"
+        if bv_hash.get(tvs_number) is None:
+            # побайтово меняем на нули информацию о выгруженных ТВС
+            # final_pool.append(k.replace_by_zero())
+            final_pool.append(k.encode())
+        else:
+            final_pool.append(k.encode())
+    return final_pool
 
-    bv_hash = get_bv_tvs(into_bv_file)
-    for_remove, tvs_count = get_tvs_to_remove(tvs_to_remove_file)
+
+def bv_sections_handler(bv_hash: dict[str, TVS], block_number: int, mode: Literal["initial", "final"]):
+    """
+    Заполняет картограммы отсеков БВ в отдельных процессах
+    :param bv_hash:
+    :param mode: Literal["initial", "final"]
+    :return:
+    """
+    # список для добавления порожденных процессов
+    prc_pool = []
+
+    section_names = ["b03", "b01", "b02"]
+    sections_maps = [get_map(bv_hash, block_number, section_name) for section_name in section_names]
+
+    section_name_gen = iter(section_names)
+
+    for map in sections_maps:
+        prc = Process(target=fill_bv_section, args=(map, next(section_name_gen), mode))
+        prc.start()
+        prc_pool.append(prc)
+
+    # дожидаемся создания всех файлов
+    for prc in prc_pool:
+        prc.join()
+
+
+if __name__ == "__main__":
+    clear_folder_files(output_dir)
+    topaz_tvs_pool = read_topaz(initial_state_file)
+    bv_hash_initial = decode_tvs_pool(topaz_tvs_pool)
+    for_remove, tvs_count, bv_hash_initial = get_tvs_to_remove(tvs_to_remove_file, bv_hash_initial)
     count = get_backup_tvs_count(tvs_count)
+    block_number = input_block_number()
+    # копируем словарь т.к. будем удалять из него вывезенные ТВС
+    bv_hash_final = copy(bv_hash_initial)
 
     # замеряем время началы работы программы
     start = time.perf_counter()
 
-    base_remove, backup = get_backup_tvs(count, for_remove, bv_hash)
+    base_remove, backup = get_backup_tvs(count, for_remove, bv_hash_final)
     containers = []
     iterator = 1
 
@@ -198,7 +152,7 @@ if __name__ == "__main__":
         tvs_pool = []
         for number in remove_lst:
             try:
-                tvs_pool.append(bv_hash.pop(number))
+                tvs_pool.append(bv_hash_final.pop(number))
             except KeyError as err:
                 print(f"Запрашиваемая на вывоз ТВС '{number}' не найдена в БВ. Проверьте данные.")
 
@@ -206,9 +160,22 @@ if __name__ == "__main__":
         for container in new_containers:
             container.fill_cells()
         containers.extend(new_containers)
+    # заполняем файлы с результатами
     result_file_handler(result_file, containers, backup)
+
+    # заполняем картограммы отсеков БВ
+    bv_sections_handler(bv_hash_initial, block_number, "initial")
+    bv_sections_handler(bv_hash_final, block_number, "final")
+
+    # записываем данные в файл ТОПАЗ
+    final_pool = get_tvs_pool_for_final_state(topaz_tvs_pool, bv_hash_final)
+    with open(final_state_file, "wb") as file:
+        file.writelines(final_pool)
 
     # вычисляем время выполнения программы
     end = time.perf_counter()
     elapsed = end - start
     print(f"Время выполнения: {elapsed:.5f} c.")
+
+    # todo
+    # 2. запись файла ТОПАЗ

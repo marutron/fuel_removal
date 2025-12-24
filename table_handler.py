@@ -109,7 +109,7 @@ def add_table(table_data: list, tk_data: dict, n: int):
     :return: None
     """
     template = os.path.join(os.path.curdir, "template", "table+tk.odt")
-    result = os.path.join(os.path.curdir, "result", f"Таблица контейнера № {n}.odt")
+    result = os.path.join(os.path.curdir, "output", f"Таблица контейнера № {n}.odt")
 
     doc = ODFHandler(template)
 
@@ -126,12 +126,3 @@ def add_table(table_data: list, tk_data: dict, n: int):
         row_iter += 1
 
     doc.save(result)
-
-
-if __name__ == "__main__":
-    add_table([
-        ["a", "b", "c", "d", "e", "f", "g"],
-        ["h", "k", "l", "m", "n", "r", "s"],
-    ],
-        {"TVS1": "N12345678", "AR12": "N123456"},
-        5)
