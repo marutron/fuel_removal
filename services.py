@@ -80,14 +80,18 @@ def get_tvs_to_remove(filename: str, bv_hash: dict[str, TVS]):
 
 
 def clear_folder_files(folder_path):
-    """Удаляет все файлы в папке."""
+    """Удаляет все файлы в папке и её вложенных подпапках, сохраняя структуру каталогов."""
     try:
-        # Получаем список всех элементов в папке
-        for item in os.listdir(folder_path):
-            item_path = os.path.join(folder_path, item)
-            os.remove(item_path)
+        # Обходим все директории и поддиректории
+        for root, dirs, files in os.walk(folder_path):
+            for file in files:
+                file_path = os.path.join(root, file)
+                try:
+                    os.remove(file_path)
+                except Exception as e:
+                    print(f"Ошибка при удалении файла {file_path}: {e}")
     except Exception as e:
-        print(f"Ошибка: {e}")
+        print(f"Ошибка при обходе директории {folder_path}: {e}")
 
 
 # Выбирает из ТВС, готовящихся к вывозу с АЭС те, сумма ЯМ в которых наименьшая
