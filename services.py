@@ -1,4 +1,5 @@
 import os
+from copy import copy
 
 from classes import TVS
 
@@ -129,3 +130,18 @@ def get_backup_tvs(count, for_remove, bv_hash):
         result_for_remove[key] = tvs_lst_new
 
     return result_for_remove, backup
+
+
+def get_final_state(chunk_pool: list[bytes], mapper: dict[str, int], bv_hash_final: dict[str, TVS]) -> list[bytes]:
+    """
+    Формируем пул ТВС после вывоза ОТВС
+    :param chunk_pool: list[bytes] - пул байтовых chunk-ов, считанный из ТОПАЗ-файла
+    :param mapper:
+    :param bv_hash_final:
+    :return: list[bytes]
+    """
+    final_pool = copy(chunk_pool)
+    for tvs_number, idx in mapper.items():
+        if bv_hash_final.get(tvs_number) is None:
+            final_pool[idx] = bytes(1749)
+    return final_pool

@@ -13,11 +13,17 @@ def read_topaz(file):
     """
     file_size = os.path.getsize(file)  # размер файла
     chunk_size = 1749  # размер описания одной ТВС
-    pool = []
+
+    # инициализируем 2 пула ТВС
+    chunk_pool = []  # сюда помещаем байтовые вырезки (chunks) из оригинального файла
+    k_pool = []  # сюда помещаем сущности k, получившиеся после парсинга chunk-ов в объекты K питоном
+
     with open(file, "rb") as inp:
         while file_size >= chunk_size:
-            k = K(inp.read(chunk_size))
-            pool.append(k)
+            chunk = inp.read(chunk_size)
+            k = K(chunk)
+            chunk_pool.append(chunk)
+            k_pool.append(k)
             file_size -= chunk_size
         tail = inp.read()
         if tail != b"":
@@ -25,20 +31,21 @@ def read_topaz(file):
             print(f"Вывод нераспределенных байт считанного файла ТОПАЗ:\n{tail}")
         else:
             print("Файл ТОПАЗ считан полностью.")
-        return pool
+        return chunk_pool, k_pool
 
 
-def write_topaz(pool: list):
+def write_topaz_state_file(file_name: str, pool: list[bytes]):
     """
     Записывает файл ТОПАЗ из переданных ТВС в pool
-    :param pool: список ТВС, переданных для записи в файл
-    :return: file
+    :param pool: список chunk-ов, переданных для записи в файл
+    :param file_name: расположение файла, в который производится запись
+    :return: None
     """
-    # todo доделать метод
-    pass
+    with open(file_name, "wb") as file:
+        file.writelines(pool)
 
 
-def decode_tvs_pool(raw_pool: list[K], codepage: str = "cp1251"):
+def decode_tvs_pool(raw_pool: list[K], codepage: str = "cp1251") -> (dict[str, TVS], dict[str, int]):
     """
     Производит расшифровку пула ТВС в байтовых данных
     :param raw_pool: list[K] - пул ТВС в байтовом виде без расшифровки
@@ -46,12 +53,17 @@ def decode_tvs_pool(raw_pool: list[K], codepage: str = "cp1251"):
     :return: dict[str, TVS] (dict[номер ТВС, ТВС])
     """
     parsed_pool = {}
+    # словарь вида dict[TVS.number, индекс в сыром списке]
+    # необходим для понимания какой номер ТВС на каком месте стоит в сыром списке ТВС
+    mapper = {}
 
-    for tvs in raw_pool:
+    for i in range(0, len(raw_pool)):
         try:
+            tvs = raw_pool[i]
             parsed_tvs = TVS(tvs, codepage)
         except Exception:
             print("Неудача парсинга ТВС.")
         else:
+            mapper.setdefault(parsed_tvs.number, i)
             parsed_pool.setdefault(parsed_tvs.number, parsed_tvs)
-    return parsed_pool
+    return parsed_pool, mapper

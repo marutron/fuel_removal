@@ -9,9 +9,10 @@ from text_replacers import fill_bv_section, fill_passport
 from cartogram_shapers import get_map
 from classes import TVS, K
 from equalizer import equalizer_main
-from services import input_block_number, clear_folder_files, get_backup_tvs_count, get_tvs_to_remove, get_backup_tvs
+from services import input_block_number, clear_folder_files, get_backup_tvs_count, get_tvs_to_remove, get_backup_tvs, \
+    get_final_state
 from table_handler import add_table
-from topaz_file_handler import read_topaz, decode_tvs_pool
+from topaz_file_handler import read_topaz, decode_tvs_pool, write_topaz_state_file
 
 cur_dir = os.getcwd()
 input_dir = os.path.join(cur_dir, "input")
@@ -85,25 +86,6 @@ def result_file_handler(result_file, containers_pool, backup):
         prc.join()
 
 
-def get_tvs_pool_for_final_state(input_pool: list[K], bv_hash: dict):
-    """
-    Формируем пул ТВС после вывоза ОТВС
-    :param input_pool: list[K] - пул ТВС, сформированный из Топаз-файла
-    :param bv_hash: словарь с ТВС
-    :return: list[K]
-    """
-    final_pool = []
-    for k in input_pool:
-        tvs_number = f"{k.tip.sort} + {k.tip.nomer} + {k.tip.indeks}"
-        if bv_hash.get(tvs_number) is None:
-            # побайтово меняем на нули информацию о выгруженных ТВС
-            # final_pool.append(k.replace_by_zero())
-            final_pool.append(k.encode())
-        else:
-            final_pool.append(k.encode())
-    return final_pool
-
-
 def bv_sections_handler(bv_hash: dict[str, TVS], block_number: int, mode: Literal["initial", "final"]):
     """
     Заполняет картограммы отсеков БВ в отдельных процессах
@@ -131,11 +113,14 @@ def bv_sections_handler(bv_hash: dict[str, TVS], block_number: int, mode: Litera
 
 if __name__ == "__main__":
     clear_folder_files(output_dir)
-    topaz_tvs_pool = read_topaz(initial_state_file)
-    bv_hash_initial = decode_tvs_pool(topaz_tvs_pool)
+    chunk_pool, k_pool = read_topaz(initial_state_file)
+    # chunk_pool_mapper: dict[str, int] задает соответствие номера ТВС индексу в списке chunk_pool
+    bv_hash_initial, chunk_pool_mapper = decode_tvs_pool(k_pool)
     for_remove, tvs_count, bv_hash_initial = get_tvs_to_remove(tvs_to_remove_file, bv_hash_initial)
-    count = get_backup_tvs_count(tvs_count)
-    block_number = input_block_number()
+    # count = get_backup_tvs_count(tvs_count)
+    count = 1
+    # block_number = input_block_number()
+    block_number = 2
     # копируем словарь т.к. будем удалять из него вывезенные ТВС
     bv_hash_final = copy(bv_hash_initial)
 
@@ -160,21 +145,17 @@ if __name__ == "__main__":
             container.fill_cells()
         containers.extend(new_containers)
     # заполняем файлы с результатами
-    result_file_handler(result_file, containers, backup)
+    # result_file_handler(result_file, containers, backup)
 
-    # заполняем картограммы отсеков БВ
-    bv_sections_handler(bv_hash_initial, block_number, "initial")
-    bv_sections_handler(bv_hash_final, block_number, "final")
+    # заполняем картограммы отсеков БВ - начальную и конечную
+    # bv_sections_handler(bv_hash_initial, block_number, "initial")
+    # bv_sections_handler(bv_hash_final, block_number, "final")
 
     # записываем данные в файл ТОПАЗ
-    final_pool = get_tvs_pool_for_final_state(topaz_tvs_pool, bv_hash_final)
-    with open(final_state_file, "wb") as file:
-        file.writelines(final_pool)
+    final_pool = get_final_state(chunk_pool, chunk_pool_mapper, bv_hash_final)
+    write_topaz_state_file(final_state_file, final_pool)
 
     # вычисляем время выполнения программы
     end = time.perf_counter()
     elapsed = end - start
     print(f"Время выполнения: {elapsed:.5f} c.")
-
-    # todo
-    # 2. запись файла ТОПАЗ

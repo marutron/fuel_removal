@@ -20,10 +20,6 @@ class tp:
     def __repr__(self):
         return f"{self.sort} + {self.nomer} + {self.indeks}"
 
-    def encode(self):
-        """Возвращает конкатенацию строк sort, nomer, indeks для получения байтового представления"""
-        return self.sort + self.nomer + self.indeks
-
 
 class his_sp:
     """
@@ -274,34 +270,6 @@ class K:
 
     def __repr__(self):
         return f"ТВС: {self.tip}; ПС: {self.cp.nomer}; coord: {self.most}-{self.tel}; out: {self.datout}"
-
-    def encode(self):
-        """
-        Возвращает байтовую форму полей класса
-        :return:
-        """
-        data = []
-        for item in self.__dict__.values():
-            try:
-                data.append(item.encode())
-            except AttributeError:
-                data.append(item)
-        return b"".join(data)
-
-    def replace_by_zero(self):
-        """
-        Заменяет все значения полей на байтовые нули
-        :return: Возвращает байтовое значение
-        """
-        for key in self.__dict__.keys():
-            value = self.__dict__[key]
-            try:
-                b_value = value.encode()
-            except AttributeError:
-                b_value = value
-            new_value = bytes(len(b_value))
-            self.__dict__[key] = new_value
-        return self.encode()
 
 
 # ------------------------------------end of section TOPAZ classes------------------------------------------------------
