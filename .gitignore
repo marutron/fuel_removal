@@ -1,3 +1,7 @@
 .idea
 input
 output
+dist
+build
+main.exe
+main.spec

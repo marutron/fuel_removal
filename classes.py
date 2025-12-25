@@ -484,19 +484,21 @@ class Container:
         with open(mp_file, "a") as file:
             for cell in self.outer_layer:
                 if not cell.is_empty():
+                    ar_code = "606" if cell.tvs.ar else "600"
                     coord_split = cell.tvs.coord.split("-")
                     most = coord_split[0]
                     tel = coord_split[1]
                     file.write(
-                        f"{next(oper_gen)}	12	600	{cell.tvs.number}	{most}	{tel}	100{self.number}		{cell.number}		N	00:00	00:00	00:00	00:00	0	0	0	0	0\n")
+                        f"{next(oper_gen)}	12	{ar_code}	{cell.tvs.number}	{most}	{tel}	100{self.number}		{cell.number}		N	00:00	00:00	00:00	00:00	0	0	0	0	0\n")
 
             for cell in self.inner_layer:
                 if not cell.is_empty():
+                    ar_code = "606" if cell.tvs.ar else "600"
                     coord_split = cell.tvs.coord.split("-")
                     most = coord_split[0]
                     tel = coord_split[1]
                     file.write(
-                        f"{next(oper_gen)}	12	600	{cell.tvs.number}	{most}	{tel}	100{self.number}		{cell.number}		N	00:00	00:00	00:00	00:00	0	0	0	0	0\n")
+                        f"{next(oper_gen)}	12	{ar_code}	{cell.tvs.number}	{most}	{tel}	100{self.number}		{cell.number}		N	00:00	00:00	00:00	00:00	0	0	0	0	0\n")
 
     def get_tvs_count(self):
         """
@@ -580,8 +582,9 @@ class Container:
             :param cell: ячейка контейенра
             :return: список значений для вставки в строку таблицы
             """
+            ar = cell.tvs.ar if cell.tvs.ar else "-"
             permutations.append(
-                [f"{next(oper_gen)}", f"{cell.tvs.number}", " ", f"{cell.tvs.coord}", " ", " ", f"{cell.number}"])
+                [f"{next(oper_gen)}", f"{cell.tvs.number}", f"{ar}", f"{cell.tvs.coord}", " ", " ", f"{cell.number}"])
             return permutations
 
         for cell in self.outer_layer:
