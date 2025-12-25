@@ -20,10 +20,6 @@ class tp:
     def __repr__(self):
         return f"{self.sort} + {self.nomer} + {self.indeks}"
 
-    def encode(self):
-        """Возвращает конкатенацию строк sort, nomer, indeks для получения байтового представления"""
-        return self.sort + self.nomer + self.indeks
-
 
 class his_sp:
     """
@@ -275,34 +271,6 @@ class K:
     def __repr__(self):
         return f"ТВС: {self.tip}; ПС: {self.cp.nomer}; coord: {self.most}-{self.tel}; out: {self.datout}"
 
-    def encode(self):
-        """
-        Возвращает байтовую форму полей класса
-        :return:
-        """
-        data = []
-        for item in self.__dict__.values():
-            try:
-                data.append(item.encode())
-            except AttributeError:
-                data.append(item)
-        return b"".join(data)
-
-    def replace_by_zero(self):
-        """
-        Заменяет все значения полей на байтовые нули
-        :return: Возвращает байтовое значение
-        """
-        for key in self.__dict__.keys():
-            value = self.__dict__[key]
-            try:
-                b_value = value.encode()
-            except AttributeError:
-                b_value = value
-            new_value = bytes(len(b_value))
-            self.__dict__[key] = new_value
-        return self.encode()
-
 
 # ------------------------------------end of section TOPAZ classes------------------------------------------------------
 
@@ -335,7 +303,7 @@ class TVS:
 
         sort = k.tip.sort[1:len_sort + 1].decode(codepage)
         nomer = k.tip.nomer[1:len_nomer + 1].decode(codepage)
-        indeks = k.tip.indeks[1:len_indeks].decode(codepage)
+        indeks = k.tip.indeks[1:len_indeks + 1].decode(codepage)
 
         self.number = sort + nomer + indeks
 
@@ -516,19 +484,21 @@ class Container:
         with open(mp_file, "a") as file:
             for cell in self.outer_layer:
                 if not cell.is_empty():
+                    ar_code = "606" if cell.tvs.ar else "600"
                     coord_split = cell.tvs.coord.split("-")
                     most = coord_split[0]
                     tel = coord_split[1]
                     file.write(
-                        f"{next(oper_gen)}	12	600	{cell.tvs.number}	{most}	{tel}	100{self.number}		{cell.number}		N	00:00	00:00	00:00	00:00	0	0	0	0	0\n")
+                        f"{next(oper_gen)}	12	{ar_code}	{cell.tvs.number}	{most}	{tel}	100{self.number}		{cell.number}		N	00:00	00:00	00:00	00:00	0	0	0	0	0\n")
 
             for cell in self.inner_layer:
                 if not cell.is_empty():
+                    ar_code = "606" if cell.tvs.ar else "600"
                     coord_split = cell.tvs.coord.split("-")
                     most = coord_split[0]
                     tel = coord_split[1]
                     file.write(
-                        f"{next(oper_gen)}	12	600	{cell.tvs.number}	{most}	{tel}	100{self.number}		{cell.number}		N	00:00	00:00	00:00	00:00	0	0	0	0	0\n")
+                        f"{next(oper_gen)}	12	{ar_code}	{cell.tvs.number}	{most}	{tel}	100{self.number}		{cell.number}		N	00:00	00:00	00:00	00:00	0	0	0	0	0\n")
 
     def get_tvs_count(self):
         """
@@ -612,8 +582,9 @@ class Container:
             :param cell: ячейка контейенра
             :return: список значений для вставки в строку таблицы
             """
+            ar = cell.tvs.ar if cell.tvs.ar else "-"
             permutations.append(
-                [f"{next(oper_gen)}", f"{cell.tvs.number}", " ", f"{cell.tvs.coord}", " ", " ", f"{cell.number}"])
+                [f"{next(oper_gen)}", f"{cell.tvs.number}", f"{ar}", f"{cell.tvs.coord}", " ", " ", f"{cell.number}"])
             return permutations
 
         for cell in self.outer_layer:
