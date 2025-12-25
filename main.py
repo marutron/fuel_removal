@@ -2,12 +2,11 @@ import time
 import math
 import os
 from copy import copy
-from multiprocessing import Process
 from typing import Literal
 
 from text_replacers import fill_bv_section, fill_passport
 from cartogram_shapers import get_map
-from classes import TVS, K
+from classes import TVS
 from equalizer import equalizer_main
 from services import input_block_number, clear_folder_files, get_backup_tvs_count, get_tvs_to_remove, get_backup_tvs, \
     get_final_state
@@ -64,9 +63,7 @@ def result_file_handler(result_file, containers_pool, backup):
             fill_passport(passport_data)
 
             # заполняем таблицы перестановок и картограммы для ТК-13 в режиме многопроцессности
-            prc = Process(target=add_table, args=(permutations, tk_data, container.number))
-            prc.start()
-            prc_pool.append(prc)
+            add_table(permutations, tk_data, container.number)
 
             # заполняем .txt файл
             file.write(
@@ -80,10 +77,6 @@ def result_file_handler(result_file, containers_pool, backup):
         file.write("Резервные ТВС:\n")
         for tvs in backup:
             file.write(f"{tvs}\n")
-
-    # дожидаемся создания всех файлов
-    for prc in prc_pool:
-        prc.join()
 
 
 def bv_sections_handler(bv_hash: dict[str, TVS], block_number: int, mode: Literal["initial", "final"]):
@@ -102,13 +95,7 @@ def bv_sections_handler(bv_hash: dict[str, TVS], block_number: int, mode: Litera
     section_name_gen = iter(section_names)
 
     for map in sections_maps:
-        prc = Process(target=fill_bv_section, args=(map, next(section_name_gen), mode))
-        prc.start()
-        prc_pool.append(prc)
-
-    # дожидаемся создания всех файлов
-    for prc in prc_pool:
-        prc.join()
+        fill_bv_section(map, next(section_name_gen), mode)
 
 
 if __name__ == "__main__":
