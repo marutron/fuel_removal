@@ -303,7 +303,7 @@ class TVS:
 
         sort = k.tip.sort[1:len_sort + 1].decode(codepage)
         nomer = k.tip.nomer[1:len_nomer + 1].decode(codepage)
-        indeks = k.tip.indeks[1:len_indeks].decode(codepage)
+        indeks = k.tip.indeks[1:len_indeks + 1].decode(codepage)
 
         self.number = sort + nomer + indeks
 
