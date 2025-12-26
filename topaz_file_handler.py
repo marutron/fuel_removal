@@ -6,13 +6,12 @@ import os.path
 from classes import TVS, K
 
 
-def read_topaz(file):
+def read_topaz(file, chunk_size):
     """
     Считывает файл ТОПАЗ, производя байтовый парсинг (декодирование и изменение не производятся здесь!)
     :return: list[K]
     """
     file_size = os.path.getsize(file)  # размер файла
-    chunk_size = 1749  # размер описания одной ТВС
 
     # инициализируем 2 пула ТВС
     chunk_pool = []  # сюда помещаем байтовые вырезки (chunks) из оригинального файла

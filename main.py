@@ -52,6 +52,11 @@ def result_file_handler(result_file, containers_pool, backup):
         # инициализируем генератор номера операции (для файла МП)
         oper_gen_mp = operation_gen()
 
+        # счетчики вывезенных ТВС из отсеков
+        removed_from_b03 = 0
+        removed_from_b01 = 0
+        removed_from_b02 = 0
+
         for container in containers_pool:
             # получаем данные для заполнения картограмм ТК-13
             tk_data = container.get_cartogram()
@@ -59,7 +64,7 @@ def result_file_handler(result_file, containers_pool, backup):
             permutations = container.get_permutations(oper_gen)
             # делаем запись в файл для МП
             container.add_mp_data(oper_gen_mp, mp_file)
-
+            # заполняем паспорта упаковки ТУК
             passport_data = container.get_passport_data()
             fill_passport(passport_data)
 
@@ -73,6 +78,10 @@ def result_file_handler(result_file, containers_pool, backup):
                 f"{container}\n"
             )
             for cell in container.outer_layer + container.inner_layer:
+                removed_from_b03, removed_from_b01, removed_from_b02 = cell.removed_from_section_calculation(
+                    removed_from_b03, removed_from_b01, removed_from_b02
+                )
+
                 file.write(f"{cell}\n")
             file.write("\n")
 
@@ -80,6 +89,11 @@ def result_file_handler(result_file, containers_pool, backup):
         file.write("Резервные ТВС:\n")
         for tvs in backup:
             file.write(f"{tvs}\n")
+
+        file.write("\nВывезено ТВС по отсекам:\n")
+        file.write(f"b01: {removed_from_b01};\n")
+        file.write(f"b02: {removed_from_b02};\n")
+        file.write(f"b03: {removed_from_b03}.")
 
     # дожидаемся создания всех файлов
     for prc in prc_pool:
@@ -112,8 +126,9 @@ def bv_sections_handler(bv_hash: dict[str, TVS], block_number: int, mode: Litera
 
 
 if __name__ == "__main__":
+    CHUNK_SIZE = 1749
     clear_folder_files(output_dir)
-    chunk_pool, k_pool = read_topaz(initial_state_file)
+    chunk_pool, k_pool = read_topaz(initial_state_file, CHUNK_SIZE)
     # chunk_pool_mapper: dict[str, int] задает соответствие номера ТВС индексу в списке chunk_pool
     bv_hash_initial, chunk_pool_mapper = decode_tvs_pool(k_pool)
     for_remove, tvs_count, bv_hash_initial = get_tvs_to_remove(tvs_to_remove_file, bv_hash_initial)
@@ -150,7 +165,7 @@ if __name__ == "__main__":
     bv_sections_handler(bv_hash_final, block_number, "final")
 
     # записываем данные в файл ТОПАЗ
-    final_pool = get_final_state(chunk_pool, chunk_pool_mapper, bv_hash_final)
+    final_pool = get_final_state(chunk_pool, chunk_pool_mapper, bv_hash_final, CHUNK_SIZE)
     write_topaz_state_file(final_state_file, final_pool)
 
     # вычисляем время выполнения программы
