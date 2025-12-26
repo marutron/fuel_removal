@@ -1,5 +1,7 @@
 # ------------------------------------TOPAZ classes---------------------------------------------------------------------
 # Здесь представлены классы и методы для представления сущностей БД ТОПАЗа ПОБАЙТОВО:
+from typing import Optional
+
 
 class tp:
     """
@@ -311,7 +313,10 @@ class TVS:
         ar = k.cp.nomer[1:len_ar + 1].decode(codepage)
         self.ar = None if ar == "" else ar
 
+        self.most = k.most[0]
+        self.tel = k.tel[0]
         self.coord = f"{k.most[0]}-{k.tel[0]}"
+
         self.year_out = k.datout[-4:].decode(codepage)
 
         len_cher = int(k.cher[0])
@@ -419,6 +424,20 @@ class TVS:
             f"prop{cell_number}": self.property
         }
 
+    def get_section(self) -> Optional[str]:
+        """
+        Возвращает название секции БВ, где находится ТВС
+        :return: Optional[str]
+        """
+        if 43 <= self.most <= 58:
+            return "b03"
+        elif 60 <= self.most <= 75:
+            return "b01"
+        elif 76 <= self.most <= 90:
+            return "b02"
+        else:
+            return None
+
 
 class Cell:
     def __init__(self, number, tvs=None):
@@ -430,6 +449,25 @@ class Cell:
 
     def is_empty(self):
         return True if self.tvs is None else False
+
+    def removed_from_section_calculation(self, removed_from_b03, removed_from_b01, removed_from_b02):
+        """
+        Считает сколько ТВС вывезено из отсека
+        :param removed_from_b03:
+        :param removed_from_b01:
+        :param removed_from_b02:
+        :return:
+        """
+        if not self.is_empty():
+            section = self.tvs.get_section()
+            match section:
+                case "b03":
+                    removed_from_b03 += 1
+                case "b01":
+                    removed_from_b01 += 1
+                case "b02":
+                    removed_from_b02 += 1
+        return removed_from_b03, removed_from_b01, removed_from_b02
 
     def get_empty_passport(self) -> dict:
         """
