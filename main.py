@@ -65,3 +65,4 @@ if __name__ == "__main__":
     end = time.perf_counter()
     elapsed = end - start
     print(f"Время выполнения: {elapsed:.5f} c.")
+    input("Выполнение завершено, нажмите Enter")
