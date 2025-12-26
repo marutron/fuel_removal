@@ -467,6 +467,8 @@ class Cell:
                     removed_from_b01 += 1
                 case "b02":
                     removed_from_b02 += 1
+                case None:
+                    print(f"Попытка вывезти ТВС не из БВ (координаты: {self.tvs.coord})")
         return removed_from_b03, removed_from_b01, removed_from_b02
 
     def get_empty_passport(self) -> dict:
