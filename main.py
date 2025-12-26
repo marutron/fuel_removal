@@ -2,16 +2,10 @@ import time
 import math
 import os
 from copy import copy
-from multiprocessing import Process
-from typing import Literal
 
-from text_replacers import fill_bv_section, fill_passport
-from cartogram_shapers import get_map
-from classes import TVS, K
 from equalizer import equalizer_main
 from services import input_block_number, clear_folder_files, get_backup_tvs_count, get_tvs_to_remove, get_backup_tvs, \
-    get_final_state
-from table_handler import add_table
+    get_final_state, result_file_handler, bv_sections_handler
 from topaz_file_handler import read_topaz, decode_tvs_pool, write_topaz_state_file
 
 cur_dir = os.getcwd()
@@ -22,108 +16,6 @@ final_state_file = os.path.join(output_dir, "final_state")
 tvs_to_remove_file = os.path.join(input_dir, "tvs_to_remove.txt")
 result_file = os.path.join(output_dir, "result.txt")
 mp_file = os.path.join(output_dir, "mp_file.mp")
-
-
-def operation_gen():
-    i = 1
-    while True:
-        yield i
-        i += 1
-
-
-def result_file_handler(result_file, containers_pool, backup):
-    """
-    Создает файлы с результатом операций
-    :param result_file: файл результата .txt (устаревшее)
-    :param containers_pool: пул сущностей контейнеров
-    :param backup: пул резервных ТВС
-    :return: None
-    """
-    with open(result_file, "w") as file:
-        # список для добавления порожденных процессов
-        prc_pool = []
-
-        # делаем "touch" для инициализации пустого файла
-        with open(mp_file, "w"):
-            pass
-
-        # инициализируем генератор номера операции (для проставки номера в первом столбце таблицы операций)
-        oper_gen = operation_gen()
-        # инициализируем генератор номера операции (для файла МП)
-        oper_gen_mp = operation_gen()
-
-        # счетчики вывезенных ТВС из отсеков
-        removed_from_b03 = 0
-        removed_from_b01 = 0
-        removed_from_b02 = 0
-
-        for container in containers_pool:
-            # получаем данные для заполнения картограмм ТК-13
-            tk_data = container.get_cartogram()
-            # получаем данные для заполнения таблиц перестановок ТК-13
-            permutations = container.get_permutations(oper_gen)
-            # делаем запись в файл для МП
-            container.add_mp_data(oper_gen_mp, mp_file)
-            # заполняем паспорта упаковки ТУК
-            passport_data = container.get_passport_data()
-            fill_passport(passport_data)
-
-            # заполняем таблицы перестановок и картограммы для ТК-13 в режиме многопроцессности
-            prc = Process(target=add_table, args=(permutations, tk_data, container.number))
-            prc.start()
-            prc_pool.append(prc)
-
-            # заполняем .txt файл
-            file.write(
-                f"{container}\n"
-            )
-            for cell in container.outer_layer + container.inner_layer:
-                removed_from_b03, removed_from_b01, removed_from_b02 = cell.removed_from_section_calculation(
-                    removed_from_b03, removed_from_b01, removed_from_b02
-                )
-
-                file.write(f"{cell}\n")
-            file.write("\n")
-
-        # дописываем резервные ТВС в конец файла
-        file.write("Резервные ТВС:\n")
-        for tvs in backup:
-            file.write(f"{tvs}\n")
-
-        file.write("\nВывезено ТВС по отсекам:\n")
-        file.write(f"b01: {removed_from_b01};\n")
-        file.write(f"b02: {removed_from_b02};\n")
-        file.write(f"b03: {removed_from_b03}.")
-
-    # дожидаемся создания всех файлов
-    for prc in prc_pool:
-        prc.join()
-
-
-def bv_sections_handler(bv_hash: dict[str, TVS], block_number: int, mode: Literal["initial", "final"]):
-    """
-    Заполняет картограммы отсеков БВ в отдельных процессах
-    :param bv_hash:
-    :param mode: Literal["initial", "final"]
-    :return:
-    """
-    # список для добавления порожденных процессов
-    prc_pool = []
-
-    section_names = ["b03", "b01", "b02"]
-    sections_maps = [get_map(bv_hash, block_number, section_name) for section_name in section_names]
-
-    section_name_gen = iter(section_names)
-
-    for map in sections_maps:
-        prc = Process(target=fill_bv_section, args=(map, next(section_name_gen), mode))
-        prc.start()
-        prc_pool.append(prc)
-
-    # дожидаемся создания всех файлов
-    for prc in prc_pool:
-        prc.join()
-
 
 if __name__ == "__main__":
     CHUNK_SIZE = 1749
@@ -158,7 +50,7 @@ if __name__ == "__main__":
             container.fill_cells()
         containers.extend(new_containers)
     # заполняем файлы с результатами
-    result_file_handler(result_file, containers, backup)
+    result_file_handler(result_file, containers, backup, mp_file)
 
     # заполняем картограммы отсеков БВ - начальную и конечную
     bv_sections_handler(bv_hash_initial, block_number, "initial")
