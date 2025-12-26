@@ -1,6 +1,5 @@
 import os
 from copy import copy
-from multiprocessing import Process
 from typing import Literal
 
 from cartogram_shapers import get_map
@@ -202,10 +201,8 @@ def result_file_handler(result_file, containers_pool, backup, mp_file):
             passport_data = container.get_passport_data()
             fill_passport(passport_data)
 
-            # заполняем таблицы перестановок и картограммы для ТК-13 в режиме многопроцессности
-            prc = Process(target=add_table, args=(permutations, tk_data, container.number))
-            prc.start()
-            prc_pool.append(prc)
+            # заполняем таблицы перестановок и картограммы для ТК-13
+            add_table(permutations, tk_data, container.number)
 
             # заполняем .txt файл
             file.write(
@@ -250,10 +247,4 @@ def bv_sections_handler(bv_hash: dict[str, TVS], block_number: int, mode: Litera
     section_name_gen = iter(section_names)
 
     for map in sections_maps:
-        prc = Process(target=fill_bv_section, args=(map, next(section_name_gen), mode))
-        prc.start()
-        prc_pool.append(prc)
-
-    # дожидаемся создания всех файлов
-    for prc in prc_pool:
-        prc.join()
+        fill_bv_section(map, next(section_name_gen), mode)
