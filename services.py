@@ -211,7 +211,7 @@ def result_file_handler(result_file, containers_pool, backup, mp_file):
             file.write(
                 f"{container}\n"
             )
-            for cell in container.outer_layer + container.inner_layer:
+            for cell in container.cells:
                 removed_from_b03, removed_from_b01, removed_from_b02 = cell.removed_from_section_calculation(
                     removed_from_b03, removed_from_b01, removed_from_b02
                 )
