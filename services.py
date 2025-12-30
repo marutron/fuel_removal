@@ -5,6 +5,7 @@ from typing import Literal
 
 from cartogram_shapers import get_map
 from classes import TVS
+from error import CustomFileNotFound
 from table_handler import add_table
 from text_replacers import fill_passport, fill_bv_section
 
@@ -44,15 +45,18 @@ def get_backup_tvs_count(tvs_count):
             return count
 
 
-def get_tvs_to_remove(filename: str, bv_hash: dict[str, TVS]):
+def get_tvs_to_remove(file_path: str, bv_hash: dict[str, TVS]):
     """
     Парсит файл с ТВС, помеченными для вывоза с АЭС
-    :param filename: имя фала, с которого выполняем считывание
+    :param file_path: имя фала, с которого выполняем считывание
     :param bv_hash: dict[номер ТВС, ТВС] словарь, содержащий ТВС
     :return:
     """
+    if not os.path.exists(file_path):
+        raise CustomFileNotFound(file_path)
+
     tvs_counter = 0
-    with open(filename) as remove_file:
+    with open(file_path) as remove_file:
         lines = remove_file.readlines()
         restrictions = {}
         last_restriction = 12

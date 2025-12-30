@@ -4,20 +4,25 @@
 import os.path
 
 from classes import TVS, K
+from error import CustomFileNotFound
 
 
-def read_topaz(file, chunk_size):
+def read_topaz(file_path, chunk_size):
     """
     Считывает файл ТОПАЗ, производя байтовый парсинг (декодирование и изменение не производятся здесь!)
     :return: list[K]
     """
-    file_size = os.path.getsize(file)  # размер файла
+
+    try:
+        file_size = os.path.getsize(file_path)  # размер файла
+    except FileNotFoundError:
+        raise CustomFileNotFound(file_path)
 
     # инициализируем 2 пула ТВС
     chunk_pool = []  # сюда помещаем байтовые вырезки (chunks) из оригинального файла
     k_pool = []  # сюда помещаем сущности k, получившиеся после парсинга chunk-ов в объекты K питоном
 
-    with open(file, "rb") as inp:
+    with open(file_path, "rb") as inp:
         while file_size >= chunk_size:
             chunk = inp.read(chunk_size)
             k = K(chunk)
