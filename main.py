@@ -24,8 +24,10 @@ if __name__ == "__main__":
     # chunk_pool_mapper: dict[str, int] задает соответствие номера ТВС индексу в списке chunk_pool
     bv_hash_initial, chunk_pool_mapper = decode_tvs_pool(k_pool)
     for_remove, tvs_count, bv_hash_initial = get_tvs_to_remove(tvs_to_remove_file, bv_hash_initial)
-    count = get_backup_tvs_count(tvs_count)
-    block_number = input_block_number()
+    # count = get_backup_tvs_count(tvs_count)
+    # block_number = input_block_number()
+    count = 1
+    block_number = 2
     # копируем словарь т.к. будем удалять из него вывезенные ТВС
     bv_hash_final = copy(bv_hash_initial)
 

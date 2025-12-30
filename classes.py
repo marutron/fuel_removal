@@ -508,11 +508,28 @@ class Container:
         self.cells_num = kwargs["cells_num"] if kwargs.get("cells_num") else 12
         self.heat = 0.0
         self.tvs_lst = []
-        self.outer_layer = [Cell(i) for i in range(1, 7)]
-        self.inner_layer = [Cell(i) for i in range(7, 13)]
+        self.cells = [Cell(i) for i in range(1, 13)]
 
     def __repr__(self):
         return f"Контейнер № {self.number}; кол-во ТВС: {self.get_tvs_count()}; тепловыделение: {round(self.heat, 4)}."
+
+    def cell_gen_upload(self):
+        """
+        Генератор ячеек на загрузку
+        :return:
+        """
+        queue = [7, 10, 12, 9, 8, 11, 1, 4, 5, 2, 3, 6]
+        for i in queue:
+            yield self.cells[i - 1]
+
+    def cell_gen_upload_tvv(self):
+        """
+        Оставляет незагруженными ячейки 1 и 5 как ближайшие к соседним поездам
+        :return:
+        """
+        queue = [7, 10, 12, 9, 8, 11, 2, 4, 3, 6, 1, 5]
+        for i in queue:
+            yield self.cells[i - 1]
 
     def add_mp_data(self, oper_gen, mp_file):
         """
@@ -555,24 +572,29 @@ class Container:
     def calculate_heat(self):
         self.heat = sum(tvs.heat for tvs in self.tvs_lst)
 
-    def fill_cells(self):
-        for cell in self.inner_layer:
-            max_heat = 0
-            hot_tvs_idx = 100500
-            for tvs in self.tvs_lst:
-                if tvs.heat > max_heat:
-                    max_heat = tvs.heat
-                    hot_tvs_idx = self.tvs_lst.index(tvs)
-            try:
-                cell.tvs = self.tvs_lst.pop(hot_tvs_idx)
-            except IndexError:
-                pass
+    def sort_tvs_lst(self):
+        """
+        Сортирует ТВС в списке self.tvs_lst по возрастанию энерговыделения
+        :return:
+        """
+        self.tvs_lst = sorted(self.tvs_lst, key=lambda tvs: tvs.heat, reverse=False)
 
-        for cell in self.outer_layer:
+    def fill_cells(self):
+        """
+        Заполняет ячейки объектами ТВС
+        :return:
+        """
+        self.sort_tvs_lst()
+        cell_iter = iter(self.cell_gen_upload())
+        while True:
+            try:
+                cell = next(cell_iter)
+            except StopIteration:
+                return
             try:
                 cell.tvs = self.tvs_lst.pop()
             except IndexError:
-                pass
+                return
 
     def get_cartogram(self):
         """
