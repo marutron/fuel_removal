@@ -539,23 +539,15 @@ class Container:
         :return: None
         """
         with open(mp_file, "a") as file:
-            for cell in self.outer_layer:
+            for cell in self.cells:
                 if not cell.is_empty():
                     ar_code = "606" if cell.tvs.ar else "600"
                     coord_split = cell.tvs.coord.split("-")
                     most = coord_split[0]
                     tel = coord_split[1]
                     file.write(
-                        f"{next(oper_gen)}	12	{ar_code}	{cell.tvs.number}	{most}	{tel}	100{self.number}		{cell.number}		N	00:00	00:00	00:00	00:00	0	0	0	0	0\n")
-
-            for cell in self.inner_layer:
-                if not cell.is_empty():
-                    ar_code = "606" if cell.tvs.ar else "600"
-                    coord_split = cell.tvs.coord.split("-")
-                    most = coord_split[0]
-                    tel = coord_split[1]
-                    file.write(
-                        f"{next(oper_gen)}	12	{ar_code}	{cell.tvs.number}	{most}	{tel}	100{self.number}		{cell.number}		N	00:00	00:00	00:00	00:00	0	0	0	0	0\n")
+                        f"{next(oper_gen)}	12	{ar_code}	{cell.tvs.number}	{most}	{tel}	100{self.number}		{cell.number}		N	00:00	00:00	00:00	00:00	0	0	0	0	0\n"
+                    )
 
     def get_tvs_count(self):
         """
@@ -565,11 +557,13 @@ class Container:
         if len(self.tvs_lst) > 0:
             return len(self.tvs_lst)
         else:
-            outer_count = sum([0 if i.is_empty() else 1 for i in self.outer_layer])
-            inner_count = sum([0 if j.is_empty() else 1 for j in self.inner_layer])
-            return inner_count + outer_count
+            return sum([0 if cell.is_empty() else 1 for cell in self.cells])
 
     def calculate_heat(self):
+        """
+        Рассчитывает тепловыделение контейнера
+        :return:
+        """
         self.heat = sum(tvs.heat for tvs in self.tvs_lst)
 
     def sort_tvs_lst(self):
@@ -618,10 +612,7 @@ class Container:
                 cartogram[f"AR{cell.number}"] = "-"
             return cartogram
 
-        for cell in self.outer_layer:
-            cartogram = add_cell(cartogram, cell)
-
-        for cell in self.inner_layer:
+        for cell in self.cells:
             cartogram = add_cell(cartogram, cell)
 
         cartogram["n"] = self.number
@@ -649,11 +640,7 @@ class Container:
                 [f"{next(oper_gen)}", f"{cell.tvs.number}", f"{ar}", f"{cell.tvs.coord}", " ", " ", f"{cell.number}"])
             return permutations
 
-        for cell in self.outer_layer:
-            if not cell.is_empty():
-                permutations = add_cell(permutations, cell)
-
-        for cell in self.inner_layer:
+        for cell in self.cells:
             if not cell.is_empty():
                 permutations = add_cell(permutations, cell)
 
@@ -665,12 +652,7 @@ class Container:
         :return:
         """
         data = {}
-        for cell in self.outer_layer:
-            if cell.tvs is not None:
-                data.update(cell.tvs.get_passport(cell.number))
-            else:
-                data.update(cell.get_empty_passport())
-        for cell in self.inner_layer:
+        for cell in self.cells:
             if cell.tvs is not None:
                 data.update(cell.tvs.get_passport(cell.number))
             else:
