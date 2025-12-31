@@ -1,13 +1,15 @@
 import os
 from copy import copy
 from multiprocessing import Process
-from typing import Literal
+from typing import Literal, TYPE_CHECKING
 
 from cartogram_shapers import get_map
-from classes import TVS
 from error import CustomFileNotFound
 from table_handler import add_table
 from text_replacers import fill_passport, fill_bv_section
+
+if TYPE_CHECKING:
+    from classes import TVS
 
 
 def input_block_number() -> int:
@@ -45,7 +47,7 @@ def get_backup_tvs_count(tvs_count):
             return count
 
 
-def get_tvs_to_remove(file_path: str, bv_hash: dict[str, TVS]):
+def get_tvs_to_remove(file_path: str, bv_hash: dict[str, "TVS"]):
     """
     Парсит файл с ТВС, помеченными для вывоза с АЭС
     :param file_path: имя фала, с которого выполняем считывание
@@ -144,7 +146,7 @@ def get_backup_tvs(count, for_remove, bv_hash):
 def get_final_state(
         chunk_pool: list[bytes],
         mapper: dict[str, int],
-        bv_hash_final: dict[str, TVS],
+        bv_hash_final: dict[str, "TVS"],
         chunk_size: int
 ) -> list[bytes]:
     """
@@ -238,7 +240,7 @@ def result_file_handler(result_file, containers_pool, backup, mp_file):
         prc.join()
 
 
-def bv_sections_handler(bv_hash: dict[str, TVS], block_number: int, mode: Literal["initial", "final"]):
+def bv_sections_handler(bv_hash: dict[str, "TVS"], block_number: int, mode: Literal["initial", "final"]):
     """
     Заполняет картограммы отсеков БВ в отдельных процессах
     :param bv_hash:
@@ -261,3 +263,45 @@ def bv_sections_handler(bv_hash: dict[str, TVS], block_number: int, mode: Litera
     # дожидаемся создания всех файлов
     for prc in prc_pool:
         prc.join()
+
+
+def parse_real48(real48):
+    """
+    Преобразует массив из 6 байт (формат Real48 Delphi) в число типа float (double).
+
+    Args:
+        real48: list или bytes длиной 6 — байты числа в формате Real48 (little‑endian).
+
+    Returns:
+        float — значение в формате double.
+    """
+    if len(real48) != 6:
+        raise ValueError("Массив real48 должен содержать ровно 6 байт")
+
+    # Если первый байт равен 0, число считается нулевым
+    if real48[0] == 0:
+        return 0.0
+
+    # Экспонента: первый байт минус bias (129)
+    exponent = real48[0] - 129.0
+
+    # Сборка мантиссы
+    mantissa = 0.0
+    # Обрабатываем байты 1–4 (индексы 1–4 в массиве)
+    for i in range(1, 5):
+        mantissa += real48[i]
+        mantissa *= 0.00390625  # Эквивалентно делению на 256
+
+    # Добавляем младший байт (5‑й элемент, индекс 5), маскируя старший бит (знак)
+    mantissa += (real48[5] & 0x7F)
+    mantissa *= 0.0078125  # Эквивалентно делению на 128
+
+    # Неявная единица перед двоичной точкой
+    mantissa += 1.0
+
+    # Проверяем старший бит последнего байта — это бит знака
+    if (real48[5] & 0x80) == 0x80:
+        mantissa = -mantissa
+
+    # Итоговый результат: мантисса * 2^экспонента
+    return mantissa * (2.0 ** exponent)

@@ -2,6 +2,8 @@
 # Здесь представлены классы и методы для представления сущностей БД ТОПАЗа ПОБАЙТОВО:
 from typing import Optional
 
+from services import parse_real48
+
 
 class tp:
     """
@@ -103,7 +105,13 @@ class k_mass:
     """
 
     def __init__(self, chunk):
-        pass
+        ost_aktiv_chunk_size = 6
+
+        self.ost = chunk[0:ost_aktiv_chunk_size]
+        self.aktiv = chunk[ost_aktiv_chunk_size:]
+
+    def __repr__(self):
+        return f"ost: {self.ost}, aktiv: {self.aktiv}"
 
 
 class aktiv_OE:
@@ -114,14 +122,15 @@ class aktiv_OE:
     """
 
     def __init__(self, chunk):
-        self.k_OE_akt = chunk
+        k_mass_size = 12
+        k_mass_count = 14
 
-    def encode(self):
-        """
-        Возвращает байтовую форму полей класса
-        :return:
-        """
-        return self.k_OE_akt
+        starts = [i * k_mass_size for i in range(k_mass_count)]
+        ends = [s + k_mass_size for s in starts]
+        self.aktiv_OE = [k_mass(chunk[s:e]) for s, e in zip(starts, ends)]
+
+    def __repr__(self):
+        return self.aktiv_OE
 
 
 class kamNew:
@@ -225,7 +234,7 @@ class K:
     def __init__(self, chunk):
         self.tip = tp(chunk[0:27])
         self.cp = sp(chunk[26:618])
-        self.k_OE_akt = aktiv_OE(chunk[617:785])
+        self.k_OE_akt = aktiv_OE(chunk[618:786])
         self.mesto = chunk[786:791]
         self.way = chunk[791:793]
         self.ty = chunk[793:824]
@@ -324,75 +333,37 @@ class TVS:
         self.production_date = k.datap[1:].decode(codepage)
         self.date_in = k.datin[1:].decode(codepage)
         self.date_out = k.datout[1:].decode(codepage)
-        self.burn = self.parse_real48(k.shlak)
+        self.burn = parse_real48(k.shlak)
         self.property = 'АО "Концерн Росэнергоатом"' if k.kod_sob == b" " else "Федеральная"
 
         self.rn = k.rn[0]  # расчетный номер (симетрия 60)
         self.n360 = k.n360[0]  # номер в АЗ
         self.complete_camp = k.otrkam[0]  # отработано кампаний
         self.last_camp = k.potrkam[0]  # последняя отработанная кампания
-        self.uo2 = self.parse_real48(k.uo2)  # масса UO2 [граммы]
-        self.u85 = self.parse_real48(k.u85)  # масса U5 + U8
-        self.u5c = self.parse_real48(k.u5c)  # масса U5 в ТВС когда она была СТВС
-        self.u5 = self.parse_real48(k.u5)  # масса U235 в ТВС [грамм]
-        self.u6 = self.parse_real48(k.u6)  # масса U236 в ТВС [грамм]
-        self.u8 = self.parse_real48(k.u8)  # масса U238 в ТВС [грамм]
-        self.pu8 = self.parse_real48(k.p8)  # масса Pu238 в ТВС [грамм]
-        self.pu9 = self.parse_real48(k.p9)  # масса Pu239 в ТВС [грамм]
-        self.pu0 = self.parse_real48(k.p0)  # масса Pu240 в ТВС [грамм]
-        self.pu1 = self.parse_real48(k.p1)  # масса Pu241 в ТВС [грамм]
-        self.pu2 = self.parse_real48(k.p2)  # масса Pu242 в ТВС [грамм]
+        self.uo2 = parse_real48(k.uo2)  # масса UO2 [граммы]
+        self.u85 = parse_real48(k.u85)  # масса U5 + U8
+        self.u5c = parse_real48(k.u5c)  # масса U5 в ТВС когда она была СТВС
+        self.u5 = parse_real48(k.u5)  # масса U235 в ТВС [грамм]
+        self.u6 = parse_real48(k.u6)  # масса U236 в ТВС [грамм]
+        self.u8 = parse_real48(k.u8)  # масса U238 в ТВС [грамм]
+        self.pu8 = parse_real48(k.p8)  # масса Pu238 в ТВС [грамм]
+        self.pu9 = parse_real48(k.p9)  # масса Pu239 в ТВС [грамм]
+        self.pu0 = parse_real48(k.p0)  # масса Pu240 в ТВС [грамм]
+        self.pu1 = parse_real48(k.p1)  # масса Pu241 в ТВС [грамм]
+        self.pu2 = parse_real48(k.p2)  # масса Pu242 в ТВС [грамм]
         self.summ_isotopes = self.u5 + self.u8 + self.pu8 + self.pu9 + self.pu0 + self.pu1 + self.pu2
-        self.mass = self.parse_real48(k.gdo)  # масса ТВС [кг]
+        self.mass = parse_real48(k.gdo)  # масса ТВС [кг]
         self.heat = 0.0  # тепловыделение ТВС, задается только для ТВС, подлежащих отправке
 
-        # т.к. сейчас занимаемся только удалением ТВС, запишем k в экземпляр ТВС для удобства его последующего удаления
-        self.k = k
+        self.raw_heat = parse_real48(k.ost_ev)
+        self.raw_activity = parse_real48(k.aktiv)
+        self.date_heat = k.dat_ras_akt
+
+        self.all_oe = [parse_real48(elm.ost) for elm in k.k_OE_akt.aktiv_OE]
+        self.all_aktiv = [parse_real48(elm.aktiv) for elm in k.k_OE_akt.aktiv_OE]
 
     def __repr__(self):
         return f"{self.number}  {self.ar}  {self.coord}  {self.heat}"
-
-    @staticmethod
-    def parse_real48(real48):
-        """
-        Преобразует массив из 6 байт (формат Real48 Delphi) в число типа float (double).
-
-        Args:
-            real48: list или bytes длиной 6 — байты числа в формате Real48 (little‑endian).
-
-        Returns:
-            float — значение в формате double.
-        """
-        if len(real48) != 6:
-            raise ValueError("Массив real48 должен содержать ровно 6 байт")
-
-        # Если первый байт равен 0, число считается нулевым
-        if real48[0] == 0:
-            return 0.0
-
-        # Экспонента: первый байт минус bias (129)
-        exponent = real48[0] - 129.0
-
-        # Сборка мантиссы
-        mantissa = 0.0
-        # Обрабатываем байты 1–4 (индексы 1–4 в массиве)
-        for i in range(1, 5):
-            mantissa += real48[i]
-            mantissa *= 0.00390625  # Эквивалентно делению на 256
-
-        # Добавляем младший байт (5‑й элемент, индекс 5), маскируя старший бит (знак)
-        mantissa += (real48[5] & 0x7F)
-        mantissa *= 0.0078125  # Эквивалентно делению на 128
-
-        # Неявная единица перед двоичной точкой
-        mantissa += 1.0
-
-        # Проверяем старший бит последнего байта — это бит знака
-        if (real48[5] & 0x80) == 0x80:
-            mantissa = -mantissa
-
-        # Итоговый результат: мантисса * 2^экспонента
-        return mantissa * (2.0 ** exponent)
 
     def get_passport(self, cell_number: int) -> dict:
         """
