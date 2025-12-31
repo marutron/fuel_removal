@@ -1,7 +1,9 @@
 # ------------------------------------TOPAZ classes---------------------------------------------------------------------
 # Здесь представлены классы и методы для представления сущностей БД ТОПАЗа ПОБАЙТОВО:
+from datetime import datetime
 from typing import Optional
 
+from constants import STRPTIME_TEMPLATE
 from services import parse_real48
 
 
@@ -149,8 +151,17 @@ class kamNew:
     tel: byte - 1 byte
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, chunk):
+        self.n_kamp = chunk[0:1]
+        self.bgn_kam = chunk[1:12]
+        self.end_kam = chunk[12: 23]
+        self.cp = chunk[23: 34]
+        self.shl_end = chunk[34: 40]
+        self.teff = chunk[40: 46]
+        self.rn = chunk[46:47]
+        self.n360 = chunk[47:48]
+        self.most = chunk[48:49]
+        self.tel = chunk[49:50]
 
 
 class hagNew:
@@ -174,8 +185,17 @@ class hNew:
     peremec: array[0..13] of hagNew - 169 bytes
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, chunk):
+        kamp_size = 250
+        kamNew_size = 50
+        kamNew_count = 5
+
+        self.peremec = chunk[kamp_size:]  # пока не реализуем, т.к. не понадобилось
+        kamp_chunk = chunk[0:kamp_size]
+
+        starts = [i * kamNew_size for i in range(kamNew_count)]
+        ends = [s + kamNew_size for s in starts]
+        self.kamp = [kamNew(kamp_chunk[s:e]) for s, e in zip(starts, ends)]
 
 
 class K:
@@ -265,7 +285,7 @@ class K:
         self.gdo = chunk[988:994]
         self.ost_ev = chunk[994:1000]
         self.metka = chunk[1000:1011]
-        self.history = chunk[1011:1430]
+        self.history = hNew(chunk[1011:1430])
         self.postavcik = chunk[1430:1453]
         self.poluchatel = chunk[1453:1473]
         self.data_vh_k = chunk[1473:1493]
@@ -284,6 +304,50 @@ class K:
 
 
 # ------------------------------------end of section TOPAZ classes------------------------------------------------------
+
+class Campaign:
+    """
+    Содержит описание топливной кампании из истории перемещений ТВС
+    """
+
+    def __init__(self, kam_new: kamNew, codepage: str):
+        """
+        number: порядковый номер кампании ???
+        begin: начало кампании
+        end: конец кампании
+        ar: номер ПС СУЗ (если был установлен)
+        burn_end: выгорание в конце кампании
+        t_eff: отработанное эффективное время
+        rn: расчетный номер ячейки
+        n360: номер в симмтрии 360
+        most: мост
+        tel: телега
+        """
+        len_bgn_kam = int(kam_new.bgn_kam[0])
+        len_end_kam = int(kam_new.end_kam[0])
+        len_cp = int(kam_new.end_kam[0])
+
+        self.number = kam_new.n_kamp[0]
+        begin = kam_new.bgn_kam[1:len_bgn_kam + 1].decode(codepage)
+        try:
+            self.begin = datetime.strptime(begin, STRPTIME_TEMPLATE)
+        except ValueError:
+            pass
+        end = kam_new.end_kam[1:len_end_kam + 1].decode(codepage)
+
+        try:
+            self.end = datetime.strptime(end, STRPTIME_TEMPLATE)
+        except:
+            pass
+
+        self.ar = None if len_cp == 0 else kam_new.cp[1: len_cp + 1].decode(codepage)
+        self.burn_end = parse_real48(kam_new.shl_end)
+        self.t_eff = parse_real48(kam_new.teff)
+        self.rn = kam_new.rn[0]
+        self.n360 = kam_new.n360[0]
+        self.most = kam_new.most[0]
+        self.tel = kam_new.tel[0]
+
 
 class TVS:
     """
@@ -359,8 +423,10 @@ class TVS:
         self.raw_activity = parse_real48(k.aktiv)
         self.date_heat = k.dat_ras_akt
 
-        self.all_oe = [parse_real48(elm.ost) for elm in k.k_OE_akt.aktiv_OE]
-        self.all_aktiv = [parse_real48(elm.aktiv) for elm in k.k_OE_akt.aktiv_OE]
+        self.heat_data = [parse_real48(elm.ost) for elm in k.k_OE_akt.aktiv_OE]
+        self.activity_data = [parse_real48(elm.aktiv) for elm in k.k_OE_akt.aktiv_OE]
+
+        self.history = [Campaign(elm, codepage) for elm in k.history.kamp if elm.bgn_kam != bytes(11)]
 
     def __repr__(self):
         return f"{self.number}  {self.ar}  {self.coord}  {self.heat}"

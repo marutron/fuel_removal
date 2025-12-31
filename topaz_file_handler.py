@@ -65,8 +65,9 @@ def decode_tvs_pool(raw_pool: list[K], codepage: str = "cp1251") -> (dict[str, T
         try:
             k = raw_pool[i]
             tvs = TVS(k, codepage)
-        except Exception:
+        except Exception as exc:
             print("Неудача парсинга ТВС.")
+            print(exc)
         else:
             mapper.setdefault(tvs.number, i)
             parsed_pool.setdefault(tvs.number, tvs)

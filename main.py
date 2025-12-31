@@ -17,8 +17,6 @@ tvs_to_remove_file = os.path.join(input_dir, "tvs_to_remove.txt")
 result_file = os.path.join(output_dir, "result.txt")
 mp_file = os.path.join(output_dir, "mp_file.mp")
 
-exposure_days = [0, 5, 15, 30, 90, 183, 365, 730, 1095, 1460, 1825, 3650, 7300, 10960]
-
 if __name__ == "__main__":
     CHUNK_SIZE = 1749
     clear_folder_files(output_dir)
