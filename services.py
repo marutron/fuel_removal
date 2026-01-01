@@ -1,15 +1,34 @@
 import os
 from copy import copy
+from datetime import datetime
 from multiprocessing import Process
-from typing import Literal, TYPE_CHECKING
+from typing import Literal, TYPE_CHECKING, Optional
 
 from cartogram_shapers import get_map
+from constants import DATE_FORMAT
 from error import CustomFileNotFound
 from table_handler import add_table
 from text_replacers import fill_passport, fill_bv_section
 
 if TYPE_CHECKING:
     from classes import TVS
+
+
+def input_date() -> Optional[datetime]:
+    """
+    Управляет получением даты вывоза от пользователя
+    :return:
+    """
+    while True:
+        input_date = input("Введите дату расчета тепловыделения или нажмите Enter для продолжения без даты: ")
+        if input_date == "":
+            return None
+        try:
+            return datetime.strptime(input_date, DATE_FORMAT)
+        except:
+            print(
+                'Нужно ввести дату в формате "дд.мм.гггг", например 01.11.2025, или пустую строку - для отказа от ввода даты.'
+            )
 
 
 def input_block_number() -> int:

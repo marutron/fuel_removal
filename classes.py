@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Optional
 
-from constants import STRPTIME_TEMPLATE
+from constants import DATE_FORMAT, EXPOSURE_DAYS
 from services import parse_real48
 
 
@@ -330,13 +330,13 @@ class Campaign:
         self.number = kam_new.n_kamp[0]
         begin = kam_new.bgn_kam[1:len_bgn_kam + 1].decode(codepage)
         try:
-            self.begin = datetime.strptime(begin, STRPTIME_TEMPLATE)
+            self.begin = datetime.strptime(begin, DATE_FORMAT)
         except ValueError:
             pass
         end = kam_new.end_kam[1:len_end_kam + 1].decode(codepage)
 
         try:
-            self.end = datetime.strptime(end, STRPTIME_TEMPLATE)
+            self.end = datetime.strptime(end, DATE_FORMAT)
         except:
             pass
 
@@ -370,7 +370,7 @@ class TVS:
     heat: тепловыделение ТВС
     """
 
-    def __init__(self, k: K, codepage: str):
+    def __init__(self, k: K, codepage: str, date: Optional[datetime] = None):
         # задаем границы жестко
         len_sort = int(k.tip.sort[0])
         len_nomer = int(k.tip.nomer[0])
@@ -419,8 +419,6 @@ class TVS:
         self.mass = parse_real48(k.gdo)  # масса ТВС [кг]
         self.heat = 0.0  # тепловыделение ТВС, задается только для ТВС, подлежащих отправке
 
-        self.raw_heat = parse_real48(k.ost_ev)
-        self.raw_activity = parse_real48(k.aktiv)
         self.date_heat = k.dat_ras_akt
 
         self.heat_data = [parse_real48(elm.ost) for elm in k.k_OE_akt.aktiv_OE]
@@ -428,8 +426,45 @@ class TVS:
 
         self.history = [Campaign(elm, codepage) for elm in k.history.kamp if elm.bgn_kam != bytes(11)]
 
+        if date:
+            self.raw_heat = self.calculate_heat(date)
+
+        pass
+
     def __repr__(self):
         return f"{self.number}  {self.ar}  {self.coord}  {self.heat}"
+
+    def calculate_heat(self, date: datetime) -> float:
+        """
+        Вычисляет значение остаточного энерговыделения ТВС путем линейной интерполяции
+        """
+        try:
+            last_campaign_end = self.history[-1].end
+        except Exception:
+            print(f"Невозможно вычислить остаточное энерговыделение ТВС {self.number}: ")
+            print(f"(Проблемы с доступом к полям TVS.history)")
+            return 0
+
+        exposure = (date - last_campaign_end).days
+
+        if exposure < EXPOSURE_DAYS[0]:
+            print(f"Невозможно вычислить остаточное энерговыделение ТВС {self.number}: ")
+            print(f"(Введена дата, предшествующая выгрузке ТВС из АЗ)")
+            return 0
+        elif exposure > EXPOSURE_DAYS[-1]:
+            print(f"Невозможно вычислить остаточное энерговыделение ТВС {self.number}: ")
+            print(f"(Введена дата, соответствующая выдержки ТВС более 30 лет)")
+            return 0
+
+        for i in range(0, len(EXPOSURE_DAYS) + 1):
+            x2 = EXPOSURE_DAYS[i]
+            if x2 >= exposure:
+                y2 = self.heat_data[i]
+                x1 = EXPOSURE_DAYS[i - 1]
+                y1 = self.heat_data[i - 1]
+                break
+
+        return y1 + (exposure - x1) * (y2 - y1) / (x2 - x1)
 
     def get_passport(self, cell_number: int) -> dict:
         """
