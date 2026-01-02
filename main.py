@@ -22,11 +22,10 @@ mp_file = os.path.join(output_dir, "mp_file.mp")
 if __name__ == "__main__":
     CHUNK_SIZE = 1749
     clear_folder_files(output_dir)
-    # date = input_date()
-    date = datetime.strptime("01.01.2026", DATE_FORMAT)
+    # date = input_date()   # не задействуем в этом проекте
     chunk_pool, k_pool = read_topaz(initial_state_file, CHUNK_SIZE)
     # chunk_pool_mapper: dict[str, int] задает соответствие номера ТВС индексу в списке chunk_pool
-    bv_hash_initial, chunk_pool_mapper = decode_tvs_pool(k_pool, date=date)
+    bv_hash_initial, chunk_pool_mapper = decode_tvs_pool(k_pool, date=None)
     for_remove, tvs_count, bv_hash_initial = get_tvs_to_remove(tvs_to_remove_file, bv_hash_initial)
     count = get_backup_tvs_count(tvs_count)
     block_number = input_block_number()
