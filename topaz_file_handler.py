@@ -2,6 +2,8 @@
 В данном модуле представлены методы для парсинга файла БД ТОПАЗа.
 """
 import os.path
+from datetime import datetime
+from typing import Optional
 
 from classes import TVS, K
 from error import CustomFileNotFound
@@ -49,11 +51,16 @@ def write_topaz_state_file(file_name: str, pool: list[bytes]):
         file.writelines(pool)
 
 
-def decode_tvs_pool(raw_pool: list[K], codepage: str = "cp1251") -> (dict[str, TVS], dict[str, int]):
+def decode_tvs_pool(
+        raw_pool: list[K],
+        codepage: str = "cp1251",
+        date: Optional[datetime] = None
+) -> (dict[str, TVS], dict[str, int]):
     """
     Производит расшифровку пула ТВС в байтовых данных
     :param raw_pool: list[K] - пул ТВС в байтовом виде без расшифровки
     :param codepage: используемая кодировка
+    :param date: дата, на которую производится расчет (для расчета остаточного тепловыделения ТВС) - опционально
     :return: dict[str, TVS] (dict[номер ТВС, ТВС])
     """
     parsed_pool = {}
@@ -63,11 +70,12 @@ def decode_tvs_pool(raw_pool: list[K], codepage: str = "cp1251") -> (dict[str, T
 
     for i in range(0, len(raw_pool)):
         try:
-            tvs = raw_pool[i]
-            parsed_tvs = TVS(tvs, codepage)
-        except Exception:
+            k = raw_pool[i]
+            tvs = TVS(k, codepage, date)
+        except Exception as exc:
             print("Неудача парсинга ТВС.")
+            print(exc)
         else:
-            mapper.setdefault(parsed_tvs.number, i)
-            parsed_pool.setdefault(parsed_tvs.number, parsed_tvs)
+            mapper.setdefault(tvs.number, i)
+            parsed_pool.setdefault(tvs.number, tvs)
     return parsed_pool, mapper

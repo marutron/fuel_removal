@@ -1,6 +1,10 @@
 # ------------------------------------TOPAZ classes---------------------------------------------------------------------
 # Здесь представлены классы и методы для представления сущностей БД ТОПАЗа ПОБАЙТОВО:
+from datetime import datetime
 from typing import Optional
+
+from constants import DATE_FORMAT, EXPOSURE_DAYS
+from services import parse_real48
 
 
 class tp:
@@ -103,7 +107,13 @@ class k_mass:
     """
 
     def __init__(self, chunk):
-        pass
+        ost_aktiv_chunk_size = 6
+
+        self.ost = chunk[0:ost_aktiv_chunk_size]
+        self.aktiv = chunk[ost_aktiv_chunk_size:]
+
+    def __repr__(self):
+        return f"ost: {self.ost}, aktiv: {self.aktiv}"
 
 
 class aktiv_OE:
@@ -114,14 +124,15 @@ class aktiv_OE:
     """
 
     def __init__(self, chunk):
-        self.k_OE_akt = chunk
+        k_mass_size = 12
+        k_mass_count = 14
 
-    def encode(self):
-        """
-        Возвращает байтовую форму полей класса
-        :return:
-        """
-        return self.k_OE_akt
+        starts = [i * k_mass_size for i in range(k_mass_count)]
+        ends = [s + k_mass_size for s in starts]
+        self.aktiv_OE = [k_mass(chunk[s:e]) for s, e in zip(starts, ends)]
+
+    def __repr__(self):
+        return self.aktiv_OE
 
 
 class kamNew:
@@ -140,8 +151,17 @@ class kamNew:
     tel: byte - 1 byte
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, chunk):
+        self.n_kamp = chunk[0:1]
+        self.bgn_kam = chunk[1:12]
+        self.end_kam = chunk[12: 23]
+        self.cp = chunk[23: 34]
+        self.shl_end = chunk[34: 40]
+        self.teff = chunk[40: 46]
+        self.rn = chunk[46:47]
+        self.n360 = chunk[47:48]
+        self.most = chunk[48:49]
+        self.tel = chunk[49:50]
 
 
 class hagNew:
@@ -165,8 +185,17 @@ class hNew:
     peremec: array[0..13] of hagNew - 169 bytes
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, chunk):
+        kamp_size = 250
+        kamNew_size = 50
+        kamNew_count = 5
+
+        self.peremec = chunk[kamp_size:]  # пока не реализуем, т.к. не понадобилось
+        kamp_chunk = chunk[0:kamp_size]
+
+        starts = [i * kamNew_size for i in range(kamNew_count)]
+        ends = [s + kamNew_size for s in starts]
+        self.kamp = [kamNew(kamp_chunk[s:e]) for s, e in zip(starts, ends)]
 
 
 class K:
@@ -225,7 +254,7 @@ class K:
     def __init__(self, chunk):
         self.tip = tp(chunk[0:27])
         self.cp = sp(chunk[26:618])
-        self.k_OE_akt = aktiv_OE(chunk[617:785])
+        self.k_OE_akt = aktiv_OE(chunk[618:786])
         self.mesto = chunk[786:791]
         self.way = chunk[791:793]
         self.ty = chunk[793:824]
@@ -256,7 +285,7 @@ class K:
         self.gdo = chunk[988:994]
         self.ost_ev = chunk[994:1000]
         self.metka = chunk[1000:1011]
-        self.history = chunk[1011:1430]
+        self.history = hNew(chunk[1011:1430])
         self.postavcik = chunk[1430:1453]
         self.poluchatel = chunk[1453:1473]
         self.data_vh_k = chunk[1473:1493]
@@ -275,6 +304,50 @@ class K:
 
 
 # ------------------------------------end of section TOPAZ classes------------------------------------------------------
+
+class Campaign:
+    """
+    Содержит описание топливной кампании из истории перемещений ТВС
+    """
+
+    def __init__(self, kam_new: kamNew, codepage: str):
+        """
+        number: порядковый номер кампании ???
+        begin: начало кампании
+        end: конец кампании
+        ar: номер ПС СУЗ (если был установлен)
+        burn_end: выгорание в конце кампании
+        t_eff: отработанное эффективное время
+        rn: расчетный номер ячейки
+        n360: номер в симмтрии 360
+        most: мост
+        tel: телега
+        """
+        len_bgn_kam = int(kam_new.bgn_kam[0])
+        len_end_kam = int(kam_new.end_kam[0])
+        len_cp = int(kam_new.end_kam[0])
+
+        self.number = kam_new.n_kamp[0]
+        begin = kam_new.bgn_kam[1:len_bgn_kam + 1].decode(codepage)
+        try:
+            self.begin = datetime.strptime(begin, DATE_FORMAT)
+        except ValueError:
+            pass
+        end = kam_new.end_kam[1:len_end_kam + 1].decode(codepage)
+
+        try:
+            self.end = datetime.strptime(end, DATE_FORMAT)
+        except:
+            pass
+
+        self.ar = None if len_cp == 0 else kam_new.cp[1: len_cp + 1].decode(codepage)
+        self.burn_end = parse_real48(kam_new.shl_end)
+        self.t_eff = parse_real48(kam_new.teff)
+        self.rn = kam_new.rn[0]
+        self.n360 = kam_new.n360[0]
+        self.most = kam_new.most[0]
+        self.tel = kam_new.tel[0]
+
 
 class TVS:
     """
@@ -297,7 +370,7 @@ class TVS:
     heat: тепловыделение ТВС
     """
 
-    def __init__(self, k: K, codepage: str):
+    def __init__(self, k: K, codepage: str, date: Optional[datetime] = None):
         # задаем границы жестко
         len_sort = int(k.tip.sort[0])
         len_nomer = int(k.tip.nomer[0])
@@ -324,75 +397,74 @@ class TVS:
         self.production_date = k.datap[1:].decode(codepage)
         self.date_in = k.datin[1:].decode(codepage)
         self.date_out = k.datout[1:].decode(codepage)
-        self.burn = self.parse_real48(k.shlak)
+        self.burn = parse_real48(k.shlak)
         self.property = 'АО "Концерн Росэнергоатом"' if k.kod_sob == b" " else "Федеральная"
 
         self.rn = k.rn[0]  # расчетный номер (симетрия 60)
         self.n360 = k.n360[0]  # номер в АЗ
         self.complete_camp = k.otrkam[0]  # отработано кампаний
         self.last_camp = k.potrkam[0]  # последняя отработанная кампания
-        self.uo2 = self.parse_real48(k.uo2)  # масса UO2 [граммы]
-        self.u85 = self.parse_real48(k.u85)  # масса U5 + U8
-        self.u5c = self.parse_real48(k.u5c)  # масса U5 в ТВС когда она была СТВС
-        self.u5 = self.parse_real48(k.u5)  # масса U235 в ТВС [грамм]
-        self.u6 = self.parse_real48(k.u6)  # масса U236 в ТВС [грамм]
-        self.u8 = self.parse_real48(k.u8)  # масса U238 в ТВС [грамм]
-        self.pu8 = self.parse_real48(k.p8)  # масса Pu238 в ТВС [грамм]
-        self.pu9 = self.parse_real48(k.p9)  # масса Pu239 в ТВС [грамм]
-        self.pu0 = self.parse_real48(k.p0)  # масса Pu240 в ТВС [грамм]
-        self.pu1 = self.parse_real48(k.p1)  # масса Pu241 в ТВС [грамм]
-        self.pu2 = self.parse_real48(k.p2)  # масса Pu242 в ТВС [грамм]
+        self.uo2 = parse_real48(k.uo2)  # масса UO2 [граммы]
+        self.u85 = parse_real48(k.u85)  # масса U5 + U8
+        self.u5c = parse_real48(k.u5c)  # масса U5 в ТВС когда она была СТВС
+        self.u5 = parse_real48(k.u5)  # масса U235 в ТВС [грамм]
+        self.u6 = parse_real48(k.u6)  # масса U236 в ТВС [грамм]
+        self.u8 = parse_real48(k.u8)  # масса U238 в ТВС [грамм]
+        self.pu8 = parse_real48(k.p8)  # масса Pu238 в ТВС [грамм]
+        self.pu9 = parse_real48(k.p9)  # масса Pu239 в ТВС [грамм]
+        self.pu0 = parse_real48(k.p0)  # масса Pu240 в ТВС [грамм]
+        self.pu1 = parse_real48(k.p1)  # масса Pu241 в ТВС [грамм]
+        self.pu2 = parse_real48(k.p2)  # масса Pu242 в ТВС [грамм]
         self.summ_isotopes = self.u5 + self.u8 + self.pu8 + self.pu9 + self.pu0 + self.pu1 + self.pu2
-        self.mass = self.parse_real48(k.gdo)  # масса ТВС [кг]
+        self.mass = parse_real48(k.gdo)  # масса ТВС [кг]
         self.heat = 0.0  # тепловыделение ТВС, задается только для ТВС, подлежащих отправке
 
-        # т.к. сейчас занимаемся только удалением ТВС, запишем k в экземпляр ТВС для удобства его последующего удаления
-        self.k = k
+        self.date_heat = k.dat_ras_akt
+
+        self.heat_data = [parse_real48(elm.ost) for elm in k.k_OE_akt.aktiv_OE]
+        self.activity_data = [parse_real48(elm.aktiv) for elm in k.k_OE_akt.aktiv_OE]
+
+        self.history = [Campaign(elm, codepage) for elm in k.history.kamp if elm.bgn_kam != bytes(11)]
+
+        if date:
+            self.raw_heat = self.calculate_heat(date)
+
+        pass
 
     def __repr__(self):
         return f"{self.number}  {self.ar}  {self.coord}  {self.heat}"
 
-    @staticmethod
-    def parse_real48(real48):
+    def calculate_heat(self, date: datetime) -> float:
         """
-        Преобразует массив из 6 байт (формат Real48 Delphi) в число типа float (double).
-
-        Args:
-            real48: list или bytes длиной 6 — байты числа в формате Real48 (little‑endian).
-
-        Returns:
-            float — значение в формате double.
+        Вычисляет значение остаточного энерговыделения ТВС путем линейной интерполяции
         """
-        if len(real48) != 6:
-            raise ValueError("Массив real48 должен содержать ровно 6 байт")
+        try:
+            last_campaign_end = self.history[-1].end
+        except Exception:
+            print(f"Невозможно вычислить остаточное энерговыделение ТВС {self.number}: ")
+            print(f"(Проблемы с доступом к полям TVS.history)")
+            return 0
 
-        # Если первый байт равен 0, число считается нулевым
-        if real48[0] == 0:
-            return 0.0
+        exposure = (date - last_campaign_end).days
 
-        # Экспонента: первый байт минус bias (129)
-        exponent = real48[0] - 129.0
+        if exposure < EXPOSURE_DAYS[0]:
+            print(f"Невозможно вычислить остаточное энерговыделение ТВС {self.number}: ")
+            print(f"(Введена дата, предшествующая выгрузке ТВС из АЗ)")
+            return 0
+        elif exposure > EXPOSURE_DAYS[-1]:
+            print(f"Невозможно вычислить остаточное энерговыделение ТВС {self.number}: ")
+            print(f"(Введена дата, соответствующая выдержки ТВС более 30 лет)")
+            return 0
 
-        # Сборка мантиссы
-        mantissa = 0.0
-        # Обрабатываем байты 1–4 (индексы 1–4 в массиве)
-        for i in range(1, 5):
-            mantissa += real48[i]
-            mantissa *= 0.00390625  # Эквивалентно делению на 256
+        for i in range(0, len(EXPOSURE_DAYS) + 1):
+            x2 = EXPOSURE_DAYS[i]
+            if x2 >= exposure:
+                y2 = self.heat_data[i]
+                x1 = EXPOSURE_DAYS[i - 1]
+                y1 = self.heat_data[i - 1]
+                break
 
-        # Добавляем младший байт (5‑й элемент, индекс 5), маскируя старший бит (знак)
-        mantissa += (real48[5] & 0x7F)
-        mantissa *= 0.0078125  # Эквивалентно делению на 128
-
-        # Неявная единица перед двоичной точкой
-        mantissa += 1.0
-
-        # Проверяем старший бит последнего байта — это бит знака
-        if (real48[5] & 0x80) == 0x80:
-            mantissa = -mantissa
-
-        # Итоговый результат: мантисса * 2^экспонента
-        return mantissa * (2.0 ** exponent)
+        return y1 + (exposure - x1) * (y2 - y1) / (x2 - x1)
 
     def get_passport(self, cell_number: int) -> dict:
         """

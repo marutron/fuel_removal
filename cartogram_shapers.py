@@ -1,6 +1,7 @@
-from typing import Literal
+from typing import Literal, TYPE_CHECKING
 
-from classes import TVS
+if TYPE_CHECKING:
+    from classes import TVS
 
 
 # Генераторные функции мест для картограмм БВ
@@ -302,7 +303,7 @@ def get_additional_hash(block_number: int) -> dict[str, str]:
             pass
 
 
-def get_map(bv_hash: dict[str, TVS], block_number: int, mode: Literal["b03", "b01", "b02"]):
+def get_map(bv_hash: dict[str, "TVS"], block_number: int, mode: Literal["b03", "b01", "b02"]):
     """
     Получает словарь для заполнения отсека БВ вида: dict[(TVS_coord, TVS_number), (AR_coord, AR_number)]
     :param bv_hash: словарь ТВС, находящихся в отсеке
