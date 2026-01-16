@@ -1,7 +1,6 @@
 import os
 from copy import copy
 from datetime import datetime
-from multiprocessing import Process
 from typing import Literal, TYPE_CHECKING, Optional
 
 from cartogram_shapers import get_map
@@ -218,9 +217,7 @@ def result_file_handler(result_file, containers_pool, backup, mp_file):
             fill_passport(passport_data)
 
             # заполняем таблицы перестановок и картограммы для ТК-13 в режиме многопроцессности
-            prc = Process(target=add_table, args=(permutations, tk_data, container.number))
-            prc.start()
-            prc_pool.append(prc)
+            add_table(permutations, tk_data, container.number)
 
             # заполняем .txt файл
             file.write(
@@ -244,10 +241,6 @@ def result_file_handler(result_file, containers_pool, backup, mp_file):
         file.write(f"b02: {removed_from_b02};\n")
         file.write(f"b03: {removed_from_b03}.")
 
-    # дожидаемся создания всех файлов
-    for prc in prc_pool:
-        prc.join()
-
 
 def bv_sections_handler(bv_hash: dict[str, "TVS"], block_number: int, mode: Literal["initial", "final"]):
     """
@@ -265,13 +258,7 @@ def bv_sections_handler(bv_hash: dict[str, "TVS"], block_number: int, mode: Lite
     section_name_gen = iter(section_names)
 
     for map in sections_maps:
-        prc = Process(target=fill_bv_section, args=(map, next(section_name_gen), mode))
-        prc.start()
-        prc_pool.append(prc)
-
-    # дожидаемся создания всех файлов
-    for prc in prc_pool:
-        prc.join()
+        fill_bv_section(map, next(section_name_gen), mode)
 
 
 def parse_real48(real48):
