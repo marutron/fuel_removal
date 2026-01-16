@@ -286,12 +286,13 @@ class K:
         self.ost_ev = chunk[994:1000]
         self.metka = chunk[1000:1011]
         self.history = hNew(chunk[1011:1430])
-        self.postavcik = chunk[1430:1453]
-        self.poluchatel = chunk[1453:1473]
-        self.data_vh_k = chunk[1473:1493]
-        self.nom_tuk = chunk[1493:1513]
-        self.nakladnay = chunk[1513:1585]
-        self.kod_sob = chunk[1585:1586]
+        # chunk[1430:1493] - непонятно что
+        self.postavcik = chunk[1493:1516]
+        self.poluchatel = chunk[1516:1536]
+        self.data_vh_k = chunk[1536:1556]
+        self.nom_tuk = chunk[1556:1576]
+        self.nakladnay = chunk[1576:1648]
+        self.kod_sob = chunk[1648:1649]
         self.mesto_tyk = chunk[1586:1587]
         self.naklanday_out = chunk[1587:1637]
         self.aktiv = chunk[1637:1643]
@@ -398,8 +399,11 @@ class TVS:
         self.date_in = k.datin[1:].decode(codepage)
         self.date_out = k.datout[1:].decode(codepage)
         self.burn = parse_real48(k.shlak)
-        self.property = 'АО "Концерн Росэнергоатом"' if k.kod_sob == b" " else "Федеральная"
-
+        self.kod_sob = k.kod_sob[0]
+        if k.kod_sob[0] == 70:
+            self.property = 'АО "Концерн Росэнергоатом"'
+        elif k.kod_sob[0] == 60:
+            self.property = 'Федеральная'
         self.rn = k.rn[0]  # расчетный номер (симетрия 60)
         self.n360 = k.n360[0]  # номер в АЗ
         self.complete_camp = k.otrkam[0]  # отработано кампаний
