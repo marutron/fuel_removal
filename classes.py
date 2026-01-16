@@ -3,7 +3,10 @@
 from datetime import datetime
 from typing import Optional
 
+from dateutil.relativedelta import relativedelta
+
 from constants import DATE_FORMAT, EXPOSURE_DAYS
+from input.config import extraction_date
 from services import parse_real48
 
 
@@ -350,6 +353,26 @@ class Campaign:
         self.tel = kam_new.tel[0]
 
 
+class AR:
+    def __init__(self, sp: sp, codepage: str = "cp1251"):
+        self.number = ""
+        self.date_out = None
+
+        len_ar = int(sp.nomer[0])
+        ar = sp.nomer[1:len_ar + 1].decode(codepage)
+        self.number = None if ar == "" else ar
+
+        len_dataout = int(sp.dataout[0])
+        date_out = sp.dataout[1:len_dataout + 1].decode(codepage)
+        try:
+            self.date_out = datetime.strptime(date_out, DATE_FORMAT)
+        except Exception:
+            pass
+
+    def __repr__(self):
+        return f"{self.number if self.number else ''}"
+
+
 class TVS:
     """
     rn: расчетный номер (симетрия 60)
@@ -371,7 +394,7 @@ class TVS:
     heat: тепловыделение ТВС
     """
 
-    def __init__(self, k: K, codepage: str, date: Optional[datetime] = None):
+    def __init__(self, k: K, codepage: str = "cp1251", date: Optional[datetime] = None):
         # задаем границы жестко
         len_sort = int(k.tip.sort[0])
         len_nomer = int(k.tip.nomer[0])
@@ -384,8 +407,7 @@ class TVS:
         self.number = sort + nomer + indeks
 
         len_ar = int(k.cp.nomer[0])
-        ar = k.cp.nomer[1:len_ar + 1].decode(codepage)
-        self.ar = None if ar == "" else ar
+        self.ar = AR(k.cp)
 
         self.most = k.most[0]
         self.tel = k.tel[0]
@@ -398,12 +420,18 @@ class TVS:
         self.production_date = k.datap[1:].decode(codepage)
         self.date_in = k.datin[1:].decode(codepage)
         self.date_out = k.datout[1:].decode(codepage)
+        try:
+            self.date_out_calc = datetime.strptime(self.date_out, DATE_FORMAT)
+        except Exception:
+            self.date_out_calc = None
         self.burn = parse_real48(k.shlak)
         self.kod_sob = k.kod_sob[0]
         if k.kod_sob[0] == 70:
             self.property = 'АО "Концерн Росэнергоатом"'
         elif k.kod_sob[0] == 60:
-            self.property = 'Федеральная'
+            self.property = "Федеральная"
+        else:
+            self.property = ""
         self.rn = k.rn[0]  # расчетный номер (симетрия 60)
         self.n360 = k.n360[0]  # номер в АЗ
         self.complete_camp = k.otrkam[0]  # отработано кампаний
@@ -475,10 +503,20 @@ class TVS:
         Собирает данные для составления паспорта упаковки
         :return:
         """
+
+        tvs_exposure_time = relativedelta(datetime.strptime(extraction_date, DATE_FORMAT), self.date_out_calc)
+        delta_tvs = f"{tvs_exposure_time.years}л.{tvs_exposure_time.months}м."
+
+        if self.ar.date_out:
+            ar_exposure_time = relativedelta(datetime.strptime(extraction_date, DATE_FORMAT), self.ar.date_out)
+            delta_ar = f"{ar_exposure_time.years}л.{ar_exposure_time.months}м."
+        else:
+            delta_ar = "-"
+
         return {
             f"number{cell_number}": self.number,
             f"cher{cell_number}": self.cher,
-            f"ar{cell_number}": self.ar if self.ar else "-",
+            f"ar{cell_number}": self.ar if self.ar.number else "-",
             f"uo2_{cell_number}": str(round(self.uo2 / 1000, 3)).replace(".", ","),
             f"tvs_mass_{cell_number}": str(round(self.mass, 1)).replace(".", ","),
             f"u_init_{cell_number}": str(round(self.u85, 1)).replace(".", ","),
@@ -486,6 +524,8 @@ class TVS:
             f"prod_{cell_number}": self.production_date,
             f"date_in_{cell_number}": self.date_in,
             f"date_out_{cell_number}": self.date_out,
+            f"exp_{cell_number}": delta_tvs,
+            f"exp_ar_{cell_number}": delta_ar,
             f"burn_{cell_number}": str(round(self.burn, 2)).replace(".", ","),
             f"mU{cell_number}": str(round(self.u5 + self.u8, 1)).replace(".", ","),
             f"u5_{cell_number}": str(round(self.u5, 1)).replace(".", ","),
@@ -682,7 +722,7 @@ class Container:
             """
             if not cell.is_empty():
                 cartogram[f"TVS{cell.number}"] = cell.tvs.number
-                cartogram[f"AR{cell.number}"] = cell.tvs.ar if cell.tvs.ar else "-"
+                cartogram[f"AR{cell.number}"] = cell.tvs.ar.number if cell.tvs.ar.number else "-"
             else:
                 cartogram[f"TVS{cell.number}"] = "-"
                 cartogram[f"AR{cell.number}"] = "-"
@@ -711,7 +751,7 @@ class Container:
             :param cell: ячейка контейенра
             :return: список значений для вставки в строку таблицы
             """
-            ar = cell.tvs.ar if cell.tvs.ar else "-"
+            ar = cell.tvs.ar.number if cell.tvs.ar.number else "-"
             permutations.append(
                 [f"{next(oper_gen)}", f"{cell.tvs.number}", f"{ar}", f"{cell.tvs.coord}", " ", " ", f"{cell.number}"])
             return permutations

@@ -9,6 +9,8 @@ from constants import DATE_FORMAT
 from error import CustomFileNotFound
 from table_handler import add_table
 from text_replacers import fill_passport, fill_bv_section
+from input.config import count as COUNT
+from input.config import block_number as BLOCK_NUMBER
 
 if TYPE_CHECKING:
     from classes import TVS
@@ -33,18 +35,13 @@ def input_date() -> Optional[datetime]:
 
 def input_block_number() -> int:
     """
-    Управляет получением номера блока от пользователя
+    Управляет получением номера блока из файла `config.py`
     :return:
     """
-    while True:
-        block_number = input("Введите номер блока: ")
-        try:
-            block_number = int(block_number)
-        except:
-            print("Нужно ввести цифру 1, 2, 3 или 4")
-        else:
-            if block_number == 1 or block_number == 2 or block_number == 3 or block_number == 4:
-                return block_number
+    block_number = BLOCK_NUMBER
+    assert (block_number == 1 or block_number == 2 or block_number == 3 or block_number == 4)
+    print(f"Номер блока: {block_number}.")
+    return block_number
 
 
 def get_backup_tvs_count(tvs_count):
@@ -53,17 +50,10 @@ def get_backup_tvs_count(tvs_count):
     :param tvs_count: количество ТВС для выгрузки из БВ
     :return:
     """
-    while True:
-        count = -10
-        try:
-            inp = input("Укажите количество резервных ТВС ")
-            count = int(inp)
-        except ValueError:
-            print(f"Невозможно распарсить '{inp}' как число. Повторите ввод.")
-        if count < 0 or count >= tvs_count:
-            print(f"Введите значение в диапазоне [0, {tvs_count - 1}]")
-        else:
-            return count
+    count = COUNT
+    assert 0 <= count <= tvs_count
+    print(f"Выбрано {count} ТВС в качестве резервных.")
+    return count
 
 
 def get_tvs_to_remove(file_path: str, bv_hash: dict[str, "TVS"]):
