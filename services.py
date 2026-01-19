@@ -7,8 +7,8 @@ from cartogram_shapers import get_map
 from constants import DATE_FORMAT
 from error import CustomFileNotFound
 from table_handler import add_table
-from text_replacers import fill_passport, fill_bv_section
-from input.config import count as COUNT
+from text_replacers import fill_passport, fill_bv_section, fill_appendix_2
+from input.config import count as COUNT, recipient
 from input.config import block_number as BLOCK_NUMBER
 
 if TYPE_CHECKING:
@@ -195,6 +195,8 @@ def result_file_handler(result_file, containers_pool, backup, mp_file):
         with open(mp_file, "w"):
             pass
 
+        appendix_2_data = {"recipient": recipient}
+
         # инициализируем генератор номера операции (для проставки номера в первом столбце таблицы операций)
         oper_gen = operation_gen()
         # инициализируем генератор номера операции (для файла МП)
@@ -216,8 +218,11 @@ def result_file_handler(result_file, containers_pool, backup, mp_file):
             passport_data = container.get_passport_data()
             fill_passport(passport_data)
 
-            # заполняем таблицы перестановок и картограммы для ТК-13 в режиме многопроцессности
+            # заполняем таблицы перестановок и картограммы для ТК-13
             add_table(permutations, tk_data, container.number)
+
+            # собираем данные для заполнения таблицы Приложения 2
+            appendix_2_data.update(container.get_appendix_data())
 
             # заполняем .txt файл
             file.write(
@@ -230,6 +235,9 @@ def result_file_handler(result_file, containers_pool, backup, mp_file):
 
                 file.write(f"{cell}\n")
             file.write("\n")
+
+        # заполняем таблицу Приложения 2
+        fill_appendix_2(appendix_2_data)
 
         # дописываем резервные ТВС в конец файла
         file.write("Резервные ТВС:\n")
@@ -245,7 +253,8 @@ def result_file_handler(result_file, containers_pool, backup, mp_file):
 def bv_sections_handler(bv_hash: dict[str, "TVS"], block_number: int, mode: Literal["initial", "final"]):
     """
     Заполняет картограммы отсеков БВ в отдельных процессах
-    :param bv_hash:
+    :param bv_hash: словарь ТВС
+    :param block_number: номер блока
     :param mode: Literal["initial", "final"]
     :return:
     """

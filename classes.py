@@ -617,6 +617,25 @@ class Cell:
             f"prop{self.number}": "-",
         }
 
+    def get_appendix_data(self, container_number: int):
+        """
+        Возвращает данные для таблицы Приложения 2
+        :param container_number: номер контейнера
+        :return:
+        """
+        if not self.is_empty():
+            return {
+                f"tvs{container_number}_{self.number}": self.tvs.number,
+                f"c{container_number}_{self.number}": self.tvs.coord,
+                f"heat{container_number}_{self.number}": str(self.tvs.heat).replace(".", ",")
+            }
+        else:
+            return {
+                f"tvs{container_number}_{self.number}": " ",
+                f"c{container_number}_{self.number}": " ",
+                f"heat{container_number}_{self.number}": " "
+            }
+
 
 class Container:
     def __init__(self, number, **kwargs):
@@ -769,10 +788,25 @@ class Container:
         """
         data = {}
         for cell in self.cells:
-            if cell.tvs is not None:
+            if not cell.is_empty():
                 data.update(cell.tvs.get_passport(cell.number))
             else:
                 data.update(cell.get_empty_passport())
         data["heat_overall"] = str(round(self.heat, 2)).replace(".", ",")
         data["container_number"] = self.number
+        return data
+
+    def get_appendix_data(self) -> dict[str, str]:
+        """
+        Возвращает данные для заполнения таблицы Приложения 2
+        :return:
+        """
+        data = {}
+        s = 0
+        for cell in self.cells:
+            if not cell.is_empty():
+                s += 1
+            data.update(cell.get_appendix_data(self.number))
+        data[f"s_{self.number}"] = str(s)
+        data[f"s_{self.number}m"] = str(round(self.heat, 2)).replace(".", ",")
         return data

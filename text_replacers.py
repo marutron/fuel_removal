@@ -77,3 +77,18 @@ def fill_passport(data: dict[str, str]):
     for p in paragraphs:
         set_text(p, data)
     doc.save(result)
+
+
+def fill_appendix_2(data: dict[str, str]):
+    """
+    Заполняет таблицу Приложения 2 графика. Результат сохраняет в папку result.
+    :param data: dict[str, str] старый текст - новый текст словарь таблицы
+    :return: None
+    """
+    template = os.path.join(os.path.curdir, "template", "appendix_2.odt")
+    result = os.path.join(os.path.curdir, "output", "Приложение 2.odt")
+    doc = load(template)
+    paragraphs = doc.getElementsByType(text.P)
+    for p in paragraphs:
+        set_text(p, data)
+    doc.save(result)
