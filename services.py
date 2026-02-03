@@ -1,4 +1,5 @@
 import os
+from collections import defaultdict
 from copy import copy
 from datetime import datetime
 from typing import Literal, TYPE_CHECKING, Optional
@@ -310,3 +311,14 @@ def parse_real48(real48):
 
     # Итоговый результат: мантисса * 2^экспонента
     return mantissa * (2.0 ** exponent)
+
+
+def add_summary(bv_hash: dict[str, "TVS"], summary_file: str):
+    summary = defaultdict(lambda: defaultdict(int))
+    for tvs in bv_hash.values():
+        summary[tvs.number[0:5]][tvs.cher] += 1
+
+    with open(summary_file, "w") as file:
+        for sort, drafts in summary.items():
+            for cher, count in drafts.items():
+                file.write(f"Сорт:{sort} чертеж: {cher} количество: {count}\n")

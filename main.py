@@ -2,12 +2,10 @@ import time
 import math
 import os
 from copy import copy
-from datetime import datetime
 
-from constants import DATE_FORMAT
 from equalizer import equalizer_main
 from services import input_block_number, clear_folder_files, get_backup_tvs_count, get_tvs_to_remove, get_backup_tvs, \
-    get_final_state, result_file_handler, bv_sections_handler, input_date
+    get_final_state, result_file_handler, bv_sections_handler, input_date, add_summary
 from topaz_file_handler import read_topaz, decode_tvs_pool, write_topaz_state_file
 
 cur_dir = os.getcwd()
@@ -18,6 +16,7 @@ final_state_file = os.path.join(output_dir, "final_state")
 tvs_to_remove_file = os.path.join(input_dir, "tvs_to_remove.txt")
 result_file = os.path.join(output_dir, "result.txt")
 mp_file = os.path.join(output_dir, "mp_file.mp")
+summary_file = os.path.join(output_dir, "summary_tvs.txt")
 
 if __name__ == "__main__":
     CHUNK_SIZE = 1749
@@ -26,6 +25,8 @@ if __name__ == "__main__":
     chunk_pool, k_pool = read_topaz(initial_state_file, CHUNK_SIZE)
     # chunk_pool_mapper: dict[str, int] задает соответствие номера ТВС индексу в списке chunk_pool
     bv_hash_initial, chunk_pool_mapper = decode_tvs_pool(k_pool, date=None)
+    # составляем таблицу расшифровки сортов ТВС
+    add_summary(bv_hash_initial, summary_file)
     for_remove, tvs_count, bv_hash_initial = get_tvs_to_remove(tvs_to_remove_file, bv_hash_initial)
     count = get_backup_tvs_count(tvs_count)
     block_number = input_block_number()
