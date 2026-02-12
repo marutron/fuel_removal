@@ -190,7 +190,6 @@ def result_file_handler(result_file, containers_pool, backup, mp_file):
     """
     with open(result_file, "w") as file:
         # список для добавления порожденных процессов
-        prc_pool = []
 
         # делаем "touch" для инициализации пустого файла
         with open(mp_file, "w"):

@@ -676,7 +676,7 @@ class Container:
         with open(mp_file, "a") as file:
             for cell in self.cells:
                 if not cell.is_empty():
-                    ar_code = "606" if cell.tvs.ar else "600"
+                    ar_code = "606" if cell.tvs.ar.number else "600"
                     coord_split = cell.tvs.coord.split("-")
                     most = coord_split[0]
                     tel = coord_split[1]
