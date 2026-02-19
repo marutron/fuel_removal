@@ -406,7 +406,6 @@ class TVS:
 
         self.number = sort + nomer + indeks
 
-        len_ar = int(k.cp.nomer[0])
         self.ar = AR(k.cp)
 
         self.most = k.most[0]
@@ -676,7 +675,21 @@ class Container:
         with open(mp_file, "a") as file:
             for cell in self.cells:
                 if not cell.is_empty():
-                    ar_code = "606" if cell.tvs.ar.number else "600"
+                    # парсим чертёж, берём часть после первой точки: 0401.02.00.000-03 => берём 02
+                    sort = cell.tvs.cher.split(".")[1]
+                    code = 999  # дефолтно забиндим странный номер
+                    match sort: # и будем изменять его в зависимости от типа ТВС
+                        case "01" | "06" | "03":
+                            code = 300
+                        case "12":
+                            code = 400
+                        case "28":
+                            code = 500
+                        case "29" | "36" | "48":
+                            code = 600
+                    if cell.tvs.ar.number:
+                        code += 6
+                    ar_code = str(code)
                     coord_split = cell.tvs.coord.split("-")
                     most = coord_split[0]
                     tel = coord_split[1]
