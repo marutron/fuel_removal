@@ -6,7 +6,7 @@ from typing import Optional
 from dateutil.relativedelta import relativedelta
 
 from constants import DATE_FORMAT, EXPOSURE_DAYS
-from input.config import extraction_date
+from input.config import extraction_date, block_number
 from services import parse_real48
 
 
@@ -336,13 +336,13 @@ class Campaign:
         try:
             self.begin = datetime.strptime(begin, DATE_FORMAT)
         except ValueError:
-            pass
+            self.begin = None
         end = kam_new.end_kam[1:len_end_kam + 1].decode(codepage)
 
         try:
             self.end = datetime.strptime(end, DATE_FORMAT)
-        except:
-            pass
+        except ValueError:
+            self.end = None
 
         self.ar = None if len_cp == 0 else kam_new.cp[1: len_cp + 1].decode(codepage)
         self.burn_end = parse_real48(kam_new.shl_end)
@@ -367,7 +367,7 @@ class AR:
         try:
             self.date_out = datetime.strptime(date_out, DATE_FORMAT)
         except Exception:
-            pass
+            self.date_out = None
 
     def __repr__(self):
         return f"{self.number if self.number else ''}"
@@ -426,7 +426,7 @@ class TVS:
         self.burn = parse_real48(k.shlak)
         self.kod_sob = k.kod_sob[0]
         if k.kod_sob[0] == 70:
-            self.property = 'АО "Концерн Росэнергоатом"'
+            self.property = 'АО "Концерн Росэнерго-атом"'
         elif k.kod_sob[0] == 60:
             self.property = "Федеральная"
         else:
@@ -460,7 +460,20 @@ class TVS:
         if date:
             self.raw_heat = self.calculate_heat(date)
 
-        pass
+        # ищем дату установки в реактор и выгрузки из реактора (для паспорта ТУК)
+        for campaign in self.history:
+            if campaign.begin and campaign.end:
+                self.date_in_az = datetime.strftime(campaign.begin, DATE_FORMAT)
+                break
+        try:
+            self.date_in_az
+        except Exception:
+            self.date_in_az = self.date_in
+
+        try:
+            self.date_out_az = datetime.strftime(self.history[-1].end, DATE_FORMAT)
+        except Exception:
+            self.date_out_az = self.date_out
 
     def __repr__(self):
         return f"{self.number}  {self.ar}  {self.coord}  {self.heat}"
@@ -521,8 +534,8 @@ class TVS:
             f"u_init_{cell_number}": str(round(self.u85, 1)).replace(".", ","),
             f"u5_init_{cell_number}": str(round(self.u5c, 1)).replace(".", ","),
             f"prod_{cell_number}": self.production_date,
-            f"date_in_{cell_number}": self.date_in,
-            f"date_out_{cell_number}": self.date_out,
+            f"date_in_{cell_number}": self.date_in_az,
+            f"date_out_{cell_number}": self.date_out_az,
             f"exp_{cell_number}": delta_tvs,
             f"exp_ar_{cell_number}": delta_ar,
             f"burn_{cell_number}": str(round(self.burn, 2)).replace(".", ","),
@@ -602,6 +615,8 @@ class Cell:
             f"prod_{self.number}": "-",
             f"date_in_{self.number}": "-",
             f"date_out_{self.number}": "-",
+            f"exp_{self.number}": "-",
+            f"exp_ar_{self.number}": "-",
             f"burn_{self.number}": "-",
             f"mU{self.number}": "-",
             f"u5_{self.number}": "-",
@@ -678,7 +693,7 @@ class Container:
                     # парсим чертёж, берём часть после первой точки: 0401.02.00.000-03 => берём 02
                     sort = cell.tvs.cher.split(".")[1]
                     code = 999  # дефолтно забиндим странный номер
-                    match sort: # и будем изменять его в зависимости от типа ТВС
+                    match sort:  # и будем изменять его в зависимости от типа ТВС
                         case "01" | "06" | "03":
                             code = 300
                         case "12":
@@ -807,6 +822,7 @@ class Container:
                 data.update(cell.get_empty_passport())
         data["heat_overall"] = str(round(self.heat, 2)).replace(".", ",")
         data["container_number"] = self.number
+        data["block"] = block_number
         return data
 
     def get_appendix_data(self) -> dict[str, str]:
