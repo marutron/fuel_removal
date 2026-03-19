@@ -1,19 +1,28 @@
 import os
 from collections import defaultdict
 from copy import copy
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Literal, TYPE_CHECKING, Optional
 
 from cartogram_shapers import get_map
 from constants import DATE_FORMAT
 from error import CustomFileNotFound
-from table_handler import add_table
+from table_handler import add_table, fill_counter_table
 from text_replacers import fill_passport, fill_bv_section, fill_appendix_2
 from input.config import count as COUNT, recipient
 from input.config import block_number as BLOCK_NUMBER
 
 if TYPE_CHECKING:
     from classes import TVS
+
+
+@dataclass
+class TVSCounts:
+    az: int
+    b03: int
+    b01: int
+    b02: int
 
 
 def input_date() -> Optional[datetime]:
@@ -42,6 +51,26 @@ def input_block_number() -> int:
     assert (block_number == 1 or block_number == 2 or block_number == 3 or block_number == 4)
     print(f"Номер блока: {block_number}.")
     return block_number
+
+
+def count_tvs(bv_hash: dict[str, "TVS"]):
+    """Подсчитывает количество ТВС в каждом отсеке БВ и реакторе"""
+    count_az = 0
+    count_b03 = 0
+    count_b01 = 0
+    count_b02 = 0
+    for tvs in bv_hash.values():
+        if tvs.number and ("N" in tvs.number or "A" in tvs.number or "M" in tvs.number):
+            match tvs.get_section():
+                case "az":
+                    count_az += 1
+                case "b03":
+                    count_b03 += 1
+                case "b01":
+                    count_b01 += 1
+                case "b02":
+                    count_b02 += 1
+    return TVSCounts(count_az, count_b03, count_b01, count_b02)
 
 
 def get_backup_tvs_count(tvs_count):
@@ -180,12 +209,13 @@ def operation_gen():
         i += 1
 
 
-def result_file_handler(result_file, containers_pool, backup, mp_file):
+def result_file_handler(result_file, containers_pool, backup, mp_file, tvs_counts: TVSCounts):
     """
     Создает файлы с результатом операций
     :param result_file: файл результата .txt (устаревшее)
     :param containers_pool: пул сущностей контейнеров
     :param backup: пул резервных ТВС
+    :param tvs_counts: Количество ТВС по отсекам
     :return: None
     """
     with open(result_file, "w") as file:
@@ -196,11 +226,14 @@ def result_file_handler(result_file, containers_pool, backup, mp_file):
             pass
 
         appendix_2_data = {"recipient": recipient}
+        counter_data = [["0", str(tvs_counts.az), str(tvs_counts.b03), str(tvs_counts.b01), str(tvs_counts.b02)]]
 
         # инициализируем генератор номера операции (для проставки номера в первом столбце таблицы операций)
         oper_gen = operation_gen()
         # инициализируем генератор номера операции (для файла МП)
         oper_gen_mp = operation_gen()
+        # инициализируем генератор номера операции (для файла подсчета ТВС по отсекам)
+        oper_gen_counter = operation_gen()
 
         # счетчики вывезенных ТВС из отсеков
         removed_from_b03 = 0
@@ -217,6 +250,9 @@ def result_file_handler(result_file, containers_pool, backup, mp_file):
             # заполняем паспорта упаковки ТУК
             passport_data = container.get_passport_data()
             fill_passport(passport_data)
+            # считаем оставшиеся ТВС по отсекам
+            tvs_counts_data, tvs_counts, oper_gen_counter = container.add_counter_data(tvs_counts, oper_gen_counter)
+            counter_data.extend(tvs_counts_data)
 
             # заполняем таблицы перестановок и картограммы для ТК-13
             add_table(permutations, tk_data, container.number)
@@ -238,6 +274,8 @@ def result_file_handler(result_file, containers_pool, backup, mp_file):
 
         # заполняем таблицу Приложения 2
         fill_appendix_2(appendix_2_data)
+
+        fill_counter_table(counter_data)
 
         # дописываем резервные ТВС в конец файла
         file.write("Резервные ТВС:\n")

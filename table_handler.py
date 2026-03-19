@@ -98,14 +98,13 @@ class TableHandler:
             par.addText(P(text=text))
 
 
-def add_table(table_data: list, tk_data: dict, n: int):
+def add_table(table_data: list[list[str]], tk_data: dict, n: int):
     """
     Заполняет таблицу ТК-13 и сохраняет её в папке result.
     В словаре предусмотреть пару ключ-значение: {n: номер чехла}
     :param table_data: данные для заполнения таблицы list[list['str']] писок формата [список [список из значений ячеек]]
     :param tk_data: данные для заполнения картограммы dict[str, str] старый текст - новый текст
     :param n: int порядковый номер ТК-13
-    :param operation_gen: генератор номера операции
     :return: None
     """
     template = os.path.join(os.path.curdir, "template", "table+tk.odt")
@@ -120,6 +119,28 @@ def add_table(table_data: list, tk_data: dict, n: int):
     # заполняем таблицу перестановок
     table = TableHandler(doc.get_table_by_name("Таблица1"))
     row_iter = 2
+    for row_data in table_data:
+        table.clone_row(row_iter)
+        table.fill_row(row_iter, row_data)
+        row_iter += 1
+
+    doc.save(result)
+
+
+def fill_counter_table(table_data: list[list[str]]):
+    """
+    Заполняет таблицу счёта ТВС по отсекам и сохраняет её в папке result.
+    :param table_data: данные для заполнения таблицы list[list['str']] писок формата [список [список из значений ячеек таблицы]]
+    :return: None
+    """
+    template = os.path.join(os.path.curdir, "template", "counter_table.odt")
+    result = os.path.join(os.path.curdir, "output", f"Счет ТВС в отсеках.odt")
+
+    doc = ODFHandler(template)
+
+    # заполняем таблицу
+    table = TableHandler(doc.get_table_by_name("Таблица1"))
+    row_iter = 1
     for row_data in table_data:
         table.clone_row(row_iter)
         table.fill_row(row_iter, row_data)

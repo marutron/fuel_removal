@@ -5,7 +5,7 @@ from copy import copy
 
 from equalizer import equalizer_main
 from services import input_block_number, clear_folder_files, get_backup_tvs_count, get_tvs_to_remove, get_backup_tvs, \
-    get_final_state, result_file_handler, bv_sections_handler, input_date, add_summary
+    get_final_state, result_file_handler, bv_sections_handler, add_summary, count_tvs, TVSCounts
 from topaz_file_handler import read_topaz, decode_tvs_pool, write_topaz_state_file
 
 cur_dir = os.getcwd()
@@ -36,6 +36,9 @@ if __name__ == "__main__":
     # замеряем время началы работы программы
     start = time.perf_counter()
 
+    # считаем начальное количество ТВС по отсекам
+    tvs_counts = count_tvs(bv_hash_initial)
+
     base_remove, backup = get_backup_tvs(count, for_remove, bv_hash_final)
     containers = []
     iterator = 1
@@ -54,7 +57,7 @@ if __name__ == "__main__":
             container.fill_cells()
         containers.extend(new_containers)
     # заполняем файлы с результатами
-    result_file_handler(result_file, containers, backup, mp_file)
+    result_file_handler(result_file, containers, backup, mp_file, tvs_counts)
 
     # заполняем картограммы отсеков БВ - начальную и конечную
     bv_sections_handler(bv_hash_initial, block_number, "initial")

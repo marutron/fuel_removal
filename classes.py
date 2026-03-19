@@ -1,13 +1,17 @@
 # ------------------------------------TOPAZ classes---------------------------------------------------------------------
 # Здесь представлены классы и методы для представления сущностей БД ТОПАЗа ПОБАЙТОВО:
 from datetime import datetime
-from typing import Optional
+from typing import Optional, TYPE_CHECKING, Iterator
 
 from dateutil.relativedelta import relativedelta
 
 from constants import DATE_FORMAT, EXPOSURE_DAYS
+from error import AzExportException
 from input.config import extraction_date, block_number
 from services import parse_real48
+
+if TYPE_CHECKING:
+    from services import TVSCounts
 
 
 class tp:
@@ -564,7 +568,7 @@ class TVS:
         elif 76 <= self.most <= 90:
             return "b02"
         else:
-            return None
+            return "az"
 
 
 class Cell:
@@ -595,8 +599,8 @@ class Cell:
                     removed_from_b01 += 1
                 case "b02":
                     removed_from_b02 += 1
-                case None:
-                    print(f"Попытка вывезти ТВС не из БВ (координаты: {self.tvs.coord})")
+                case "az":
+                    raise AzExportException(self.tvs.number, self.tvs.coord)
         return removed_from_b03, removed_from_b01, removed_from_b02
 
     def get_empty_passport(self) -> dict:
@@ -661,6 +665,25 @@ class Container:
 
     def __repr__(self):
         return f"Контейнер № {self.number}; кол-во ТВС: {self.get_tvs_count()}; тепловыделение: {round(self.heat, 4)}."
+
+    def add_counter_data(self, tvs_counts: "TVSCounts", oper_gen_counter: Iterator):
+        data = []
+        for cell in self.cells:
+            if not cell.is_empty():
+                tvs = cell.tvs
+                match tvs.get_section():
+                    case "b03":
+                        tvs_counts.b03 -= 1
+                    case "b01":
+                        tvs_counts.b01 -= 1
+                    case "b02":
+                        tvs_counts.b02 -= 1
+                    case _:
+                        raise AzExportException(tvs.number, tvs.coord)
+                data.append([str(next(oper_gen_counter)), str(tvs_counts.az), str(tvs_counts.b03), str(tvs_counts.b01),
+                             str(tvs_counts.b02)])
+
+        return data, tvs_counts, oper_gen_counter
 
     def cell_gen_upload(self):
         """
