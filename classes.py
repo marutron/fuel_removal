@@ -1,7 +1,7 @@
 # ------------------------------------TOPAZ classes---------------------------------------------------------------------
 # Здесь представлены классы и методы для представления сущностей БД ТОПАЗа ПОБАЙТОВО:
 from datetime import datetime
-from typing import Optional, TYPE_CHECKING, Iterator
+from typing import Optional, TYPE_CHECKING, Iterator, Literal
 
 from dateutil.relativedelta import relativedelta
 
@@ -454,15 +454,14 @@ class TVS:
         self.mass = parse_real48(k.gdo)  # масса ТВС [кг]
         self.heat = 0.0  # тепловыделение ТВС, задается только для ТВС, подлежащих отправке
 
-        self.date_heat = k.dat_ras_akt
-
         self.heat_data = [parse_real48(elm.ost) for elm in k.k_OE_akt.aktiv_OE]
         self.activity_data = [parse_real48(elm.aktiv) for elm in k.k_OE_akt.aktiv_OE]
 
         self.history = [Campaign(elm, codepage) for elm in k.history.kamp if elm.bgn_kam != bytes(11)]
 
         if date:
-            self.raw_heat = self.calculate_heat(date)
+            self.raw_heat = self.calculate_raw_params(date, "heat")
+            self.raw_activity = self.calculate_raw_params(date, "activity")
 
         # ищем дату установки в реактор и выгрузки из реактора (для паспорта ТУК)
         for campaign in self.history:
@@ -482,18 +481,21 @@ class TVS:
     def __repr__(self):
         return f"{self.number}  {self.ar}  {self.coord}  {self.heat}"
 
-    def calculate_heat(self, date: datetime) -> float:
+    def calculate_raw_params(self, date: datetime, mode: Literal["heat", "activity"]) -> float:
         """
-        Вычисляет значение остаточного энерговыделения ТВС путем линейной интерполяции
+        Вычисляет значение остаточного энерговыделения или активности ТВС путем линейной интерполяции
         """
         try:
             last_campaign_end = self.history[-1].end
-        except Exception:
-            print(f"Невозможно вычислить остаточное энерговыделение ТВС {self.number}: ")
-            print(f"(Проблемы с доступом к полям TVS.history)")
+        except IndexError:
+            print(f'Параметр raw_{mode} ТВС "{self.number}" установлен в 0, поскольку невозможно распарсить параметр self.history.')
             return 0
 
-        exposure = (date - last_campaign_end).days
+
+        try:
+            exposure = (date - last_campaign_end).days
+        except TypeError:
+            return 0
 
         if exposure < EXPOSURE_DAYS[0]:
             print(f"Невозможно вычислить остаточное энерговыделение ТВС {self.number}: ")
@@ -504,12 +506,14 @@ class TVS:
             print(f"(Введена дата, соответствующая выдержки ТВС более 30 лет)")
             return 0
 
+        y_arr = self.activity_data if mode == "activity" else self.heat_data
+
         for i in range(0, len(EXPOSURE_DAYS) + 1):
             x2 = EXPOSURE_DAYS[i]
             if x2 >= exposure:
-                y2 = self.heat_data[i]
+                y2 = y_arr[i]
                 x1 = EXPOSURE_DAYS[i - 1]
-                y1 = self.heat_data[i - 1]
+                y1 = y_arr[i - 1]
                 break
 
         return y1 + (exposure - x1) * (y2 - y1) / (x2 - x1)

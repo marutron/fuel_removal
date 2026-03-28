@@ -12,6 +12,8 @@ from table_handler import add_table, fill_counter_table
 from text_replacers import fill_passport, fill_bv_section, fill_appendix_2
 from input.config import count as COUNT, recipient
 from input.config import block_number as BLOCK_NUMBER
+from input.config import extraction_date as DATE
+
 
 if TYPE_CHECKING:
     from classes import TVS
@@ -27,19 +29,17 @@ class TVSCounts:
 
 def input_date() -> Optional[datetime]:
     """
-    Управляет получением даты вывоза от пользователя
+    Управляет получением даты вывоза из файла конфига
     :return:
     """
-    while True:
-        input_date = input("Введите дату расчета тепловыделения или нажмите Enter для продолжения без даты: ")
-        if input_date == "":
-            return None
-        try:
-            return datetime.strptime(input_date, DATE_FORMAT)
-        except:
-            print(
-                'Нужно ввести дату в формате "дд.мм.гггг", например 01.11.2025, или пустую строку - для отказа от ввода даты.'
-            )
+    try:
+        return datetime.strptime(DATE, DATE_FORMAT)
+    except KeyError:
+        print(
+            f'Невозможно распарсить дату "{DATE}" в формат  "дд.мм.гггг".'
+        )
+        return None
+
 
 
 def input_block_number() -> int:
