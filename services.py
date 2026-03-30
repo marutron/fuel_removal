@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
 @dataclass
 class TVSCounts:
-    az: int
+    bv: int
     b03: int
     b01: int
     b02: int
@@ -70,7 +70,8 @@ def count_tvs(bv_hash: dict[str, "TVS"]):
                     count_b01 += 1
                 case "b02":
                     count_b02 += 1
-    return TVSCounts(count_az, count_b03, count_b01, count_b02)
+    count_bv = count_b03 + count_b01 + count_b02
+    return TVSCounts(count_bv, count_b03, count_b01, count_b02)
 
 
 def get_backup_tvs_count(tvs_count):
@@ -226,7 +227,7 @@ def result_file_handler(result_file, containers_pool, backup, mp_file, tvs_count
             pass
 
         appendix_2_data = {"recipient": recipient}
-        counter_data = [["0", str(tvs_counts.az), str(tvs_counts.b03), str(tvs_counts.b01), str(tvs_counts.b02)]]
+        counter_data = [["0", str(tvs_counts.bv), str(tvs_counts.b03), str(tvs_counts.b01), str(tvs_counts.b02)]]
 
         # инициализируем генератор номера операции (для проставки номера в первом столбце таблицы операций)
         oper_gen = operation_gen()

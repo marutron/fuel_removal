@@ -687,7 +687,8 @@ class Container:
                         tvs_counts.b02 -= 1
                     case _:
                         raise AzExportException(tvs.number, tvs.coord)
-                data.append([str(next(oper_gen_counter)), str(tvs_counts.az), str(tvs_counts.b03), str(tvs_counts.b01),
+                tvs_counts.bv -= 1
+                data.append([str(next(oper_gen_counter)), str(tvs_counts.bv), str(tvs_counts.b03), str(tvs_counts.b01),
                              str(tvs_counts.b02)])
 
         return data, tvs_counts, oper_gen_counter
