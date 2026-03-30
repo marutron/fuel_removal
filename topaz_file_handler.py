@@ -69,11 +69,12 @@ def decode_tvs_pool(
     mapper = {}
 
     for i in range(0, len(raw_pool)):
+        k = raw_pool[i]
         try:
-            k = raw_pool[i]
             tvs = TVS(k, codepage, date)
         except Exception as exc:
-            print("Неудача парсинга ТВС.")
+            k = raw_pool[i]
+            print(f"Неудача парсинга ТВС {k.tip.sort.decode(codepage)}.")
             print(exc)
         else:
             mapper.setdefault(tvs.number, i)
