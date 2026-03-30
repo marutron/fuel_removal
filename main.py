@@ -5,7 +5,7 @@ from copy import copy
 
 from equalizer import equalizer_main
 from services import input_block_number, clear_folder_files, get_backup_tvs_count, get_tvs_to_remove, get_backup_tvs, \
-    get_final_state, result_file_handler, bv_sections_handler, add_summary, count_tvs, TVSCounts, input_date
+    get_final_state, result_file_handler, bv_sections_handler, add_summary, count_tvs, input_date
 from topaz_file_handler import read_topaz, decode_tvs_pool, write_topaz_state_file
 
 cur_dir = os.getcwd()
@@ -21,7 +21,7 @@ summary_file = os.path.join(output_dir, "summary_tvs.txt")
 if __name__ == "__main__":
     CHUNK_SIZE = 1749
     clear_folder_files(output_dir)
-    date = input_date()   # задействуется для расчета активности контейнеров (на наклейке критичности)
+    date = input_date()  # задействуется для расчета активности контейнеров (на наклейке критичности)
     chunk_pool, k_pool = read_topaz(initial_state_file, CHUNK_SIZE)
     # chunk_pool_mapper: dict[str, int] задает соответствие номера ТВС индексу в списке chunk_pool
     bv_hash_initial, chunk_pool_mapper = decode_tvs_pool(k_pool, date=date)
