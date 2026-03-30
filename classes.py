@@ -439,29 +439,31 @@ class TVS:
         self.n360 = k.n360[0]  # номер в АЗ
         self.complete_camp = k.otrkam[0]  # отработано кампаний
         self.last_camp = k.potrkam[0]  # последняя отработанная кампания
-        self.uo2 = parse_real48(k.uo2)  # масса UO2 [граммы]
-        self.u85 = parse_real48(k.u85)  # масса U5 + U8
+        self.uo2 = parse_real48(k.uo2)  # масса UO2 [граммы] (паспорт)
+        self.u85 = parse_real48(k.u85)  # масса U5 + U8 (паспорт)
         self.u5c = parse_real48(k.u5c)  # масса U5 в ТВС когда она была СТВС
-        self.u5 = parse_real48(k.u5)  # масса U235 в ТВС [грамм]
-        self.u6 = parse_real48(k.u6)  # масса U236 в ТВС [грамм]
-        self.u8 = parse_real48(k.u8)  # масса U238 в ТВС [грамм]
-        self.pu8 = parse_real48(k.p8)  # масса Pu238 в ТВС [грамм]
-        self.pu9 = parse_real48(k.p9)  # масса Pu239 в ТВС [грамм]
-        self.pu0 = parse_real48(k.p0)  # масса Pu240 в ТВС [грамм]
-        self.pu1 = parse_real48(k.p1)  # масса Pu241 в ТВС [грамм]
-        self.pu2 = parse_real48(k.p2)  # масса Pu242 в ТВС [грамм]
+        self.u5 = parse_real48(k.u5)  # расчетная масса U235 в ТВС [грамм]
+        self.u6 = parse_real48(k.u6)  # расчетная масса U236 в ТВС [грамм]
+        self.u8 = parse_real48(k.u8)  # расчетная масса U238 в ТВС [грамм]
+        self.pu8 = parse_real48(k.p8)  # расчетная масса Pu238 в ТВС [грамм]
+        self.pu9 = parse_real48(k.p9)  # расчетная масса Pu239 в ТВС [грамм]
+        self.pu0 = parse_real48(k.p0)  # расчетная масса Pu240 в ТВС [грамм]
+        self.pu1 = parse_real48(k.p1)  # расчетная масса Pu241 в ТВС [грамм]
+        self.pu2 = parse_real48(k.p2)  # расчетная масса Pu242 в ТВС [грамм]
         self.summ_isotopes = self.u5 + self.u8 + self.pu8 + self.pu9 + self.pu0 + self.pu1 + self.pu2
         self.mass = parse_real48(k.gdo)  # масса ТВС [кг]
         self.heat = 0.0  # тепловыделение ТВС, задается только для ТВС, подлежащих отправке
 
         self.heat_data = [parse_real48(elm.ost) for elm in k.k_OE_akt.aktiv_OE]
-        self.activity_data = [parse_real48(elm.aktiv) for elm in k.k_OE_akt.aktiv_OE]
+        self.activity_data = [parse_real48(elm.aktiv) for elm in
+                              k.k_OE_akt.aktiv_OE]  # активность SFUEL * массу изотопов
 
         self.history = [Campaign(elm, codepage) for elm in k.history.kamp if elm.bgn_kam != bytes(11)]
 
         if date:
             self.raw_heat = self.calculate_raw_params(date, "heat")
-            self.raw_activity = self.calculate_raw_params(date, "activity")
+            specific_activity = self.calculate_raw_params(date, "activity")
+            self.raw_activity = specific_activity * 3.7E10  # переводим из Ки в Бк
 
         # ищем дату установки в реактор и выгрузки из реактора (для паспорта ТУК)
         for campaign in self.history:
@@ -488,9 +490,9 @@ class TVS:
         try:
             last_campaign_end = self.history[-1].end
         except IndexError:
-            print(f'Параметр raw_{mode} ТВС "{self.number}" установлен в 0, поскольку невозможно распарсить параметр self.history.')
+            print(
+                f'Параметр raw_{mode} ТВС "{self.number}" установлен в 0, поскольку невозможно распарсить параметр self.history.')
             return 0
-
 
         try:
             exposure = (date - last_campaign_end).days
@@ -661,6 +663,7 @@ class Cell:
 
 class Container:
     def __init__(self, number, **kwargs):
+        self.raw_activity = 0
         self.number = number
         self.cells_num = kwargs["cells_num"] if kwargs.get("cells_num") else 12
         self.heat = 0.0
@@ -668,7 +671,7 @@ class Container:
         self.cells = [Cell(i) for i in range(1, 13)]
 
     def __repr__(self):
-        return f"Контейнер № {self.number}; кол-во ТВС: {self.get_tvs_count()}; тепловыделение: {round(self.heat, 4)}."
+        return f"Контейнер № {self.number}; кол-во ТВС: {self.get_tvs_count()}; тепловыделение: {round(self.heat, 4)}; активность: {self.raw_activity}."
 
     def add_counter_data(self, tvs_counts: "TVSCounts", oper_gen_counter: Iterator):
         data = []
@@ -748,6 +751,17 @@ class Container:
             return len(self.tvs_lst)
         else:
             return sum([0 if cell.is_empty() else 1 for cell in self.cells])
+
+    def calculate_raw_activity(self):
+        """
+        Расчитывает активность контейнера (для наклейки на поезд)
+        :return:
+        """
+        activity = 0.0
+        for cell in self.cells:
+            if not cell.is_empty():
+                activity += cell.tvs.raw_activity
+        self.raw_activity = activity
 
     def calculate_heat(self):
         """

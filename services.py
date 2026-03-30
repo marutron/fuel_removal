@@ -241,6 +241,7 @@ def result_file_handler(result_file, containers_pool, backup, mp_file, tvs_count
         removed_from_b02 = 0
 
         for container in containers_pool:
+            container.calculate_raw_activity()
             # получаем данные для заполнения картограмм ТК-13
             tk_data = container.get_cartogram()
             # получаем данные для заполнения таблиц перестановок ТК-13
