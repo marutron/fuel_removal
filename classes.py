@@ -7,7 +7,7 @@ from dateutil.relativedelta import relativedelta
 
 from constants import DATE_FORMAT, EXPOSURE_DAYS
 from error import AzExportException
-from input.config import extraction_date, block_number
+from input.config import extraction_date, fuel_work_start_date, block_number
 from services import parse_real48
 
 if TYPE_CHECKING:
@@ -526,11 +526,11 @@ class TVS:
         :return:
         """
 
-        tvs_exposure_time = relativedelta(datetime.strptime(extraction_date, DATE_FORMAT), self.date_out_calc)
+        tvs_exposure_time = relativedelta(datetime.strptime(fuel_work_start_date, DATE_FORMAT), self.date_out_calc)
         delta_tvs = f"{tvs_exposure_time.years}л.{tvs_exposure_time.months}м."
 
         if self.ar.date_out:
-            ar_exposure_time = relativedelta(datetime.strptime(extraction_date, DATE_FORMAT), self.ar.date_out)
+            ar_exposure_time = relativedelta(datetime.strptime(fuel_work_start_date, DATE_FORMAT), self.ar.date_out)
             delta_ar = f"{ar_exposure_time.years}л.{ar_exposure_time.months}м."
         else:
             delta_ar = "-"
