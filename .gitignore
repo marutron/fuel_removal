@@ -1,6 +1,7 @@
 .idea
 input
 output
+archive
 dist
 build
 main.exe
